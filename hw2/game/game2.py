@@ -16,7 +16,7 @@ def check_victory(board):
     return None
 
 
-def Chinese_chess(Me, socket):
+def Chinese_chess(socket, Me):
     board = init_chinese_chess_board()
     current_player = Me
     opponent = "A" if Me == "B" else "B" 

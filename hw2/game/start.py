@@ -1,5 +1,9 @@
 from ..connection import connect_to_server
-from game1 import PlayerA_Game1
+from game1 import Tic_tac_toe
+from game2 import Chinese_chess
+
+
+game_list = ["Tic_tac_toe", "Chinese_chess"]
 
 
 """Client A"""
@@ -16,10 +20,10 @@ def start_game1(client_socket, game_socket1, game_type):
     print("Player B connected.")
 
     # 處理遊戲邏輯 (可根據不同遊戲類型添加具體實作)
-    if game_type == "Tic-Tac-Toe":
-        PlayerA_Game1(PlayerA, game_type)
+    if game_type == game_list[0]:
+        Tic_tac_toe(PleyerA, "A")
     else:
-        pass
+        Chinese_chess(PleyerA, "A")
 
     # 通知遊戲結束
     client_socket.sendall(b"FINISH")
@@ -37,10 +41,10 @@ def start_game2(client_socket, game_addr, game_type):
         PlayerB.sendall(f"JOIN_GAME {game_type}".encode())
 
         # 處理遊戲邏輯 (可根據不同遊戲類型添加具體實作)
-        if game_type == "Tic-Tac-Toe":
-            PlayerA_Game1(PlayerB, game_type)
+        if game_type == game_list[0]:
+            Tic_tac_toe(PlayerB, "A")
         else:
-            pass
+            Chinese_chess(PlayerB, "A")
 
     except Exception as e:
         print(f"Error during game participation: {e}")

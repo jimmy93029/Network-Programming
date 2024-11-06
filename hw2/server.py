@@ -1,7 +1,7 @@
 import threading
 from connection import bind_server
 from lobby import handle_register, handle_login1, handle_login2, handle_logout, handle_display
-
+from room import handle_create_room, handle_invite, handle_join
 
 user_db = {}        # key : user name, value = password
 online_users = {}   # key : user name, value = status, socket
@@ -53,7 +53,7 @@ def handle(data, client, addr):
 
     # room related
     if data.startswith("CREATE"):
-        handle_create(data, client, addr, rooms, login_addr)
+        handle_create_room(data, client, addr, rooms, login_addr)
     elif data.startswith("INVITE"):
         handle_invite(data, client, addr, online_users, rooms)
     elif data.startswith("JOIN"):

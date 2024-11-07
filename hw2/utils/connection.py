@@ -1,8 +1,7 @@
 import socket
 
-
 HOST = '127.0.0.1'  # Server IP
-PORT = 10001        # Port 
+PORT = 10002        # Port 
 
 
 def bind_server():

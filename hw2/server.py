@@ -1,7 +1,8 @@
 import threading
-from connection import bind_server
+from utils.connection import bind_server
 from lobby import handle_register, handle_login1, handle_login2, handle_logout, handle_display
 from room import handle_create_room, handle_invite, handle_join
+
 
 user_db = {}        # key : user name, value = password
 online_users = {}   # key : user name, value = status, socket
@@ -26,7 +27,8 @@ def run():
 def handle_client(client, addr):
     try:
         while True:
-            data = client.recv(1024).decode()  # Decode instead of encode
+            data = client.recv(1024).decode()  
+
             exit = handle(data, client, addr)
             if exit:
                 break
@@ -38,6 +40,8 @@ def handle_client(client, addr):
 
 def handle(data, client, addr):
     exit = False
+    if data != "":
+        print(f"{addr} : {data}")
 
     # lobby related    
     if data.startswith("REGISTER"):
@@ -49,19 +53,19 @@ def handle(data, client, addr):
     elif data.startswith("LOGOUT"):
         exit = handle_logout(data, client, addr, login_addr, online_users)
     elif data.startswith("DISPLAY"):
-        handle_display(data, client, addr)
+        handle_display(data, client, addr, online_users, rooms)
 
     # room related
     if data.startswith("CREATE"):
-        handle_create_room(data, client, addr, rooms, login_addr)
+        handle_create_room(data, client, addr, rooms, login_addr, online_users)
     elif data.startswith("INVITE"):
         handle_invite(data, client, addr, online_users, rooms)
     elif data.startswith("JOIN"):
-        handle_join(data, client, addr, rooms, online_users)
+        handle_join(data, client, addr, rooms, online_users, login_addr)
 
-    # game related
-    if data.startwith("FINISH"):
-        handle_game_ending()
+    # # game related
+    # if data.startwith("FINISH"):
+    #     handle_game_ending()
 
     return exit
 

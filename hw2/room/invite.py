@@ -1,4 +1,4 @@
-from ..connection import create_game_server, connect_to_server
+from utils.connection import create_game_server
 
 
 """Client A"""

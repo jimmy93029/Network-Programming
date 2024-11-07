@@ -1,8 +1,8 @@
-from ..connection import connect_to_server
+from utils.connection import connect_to_server
 
 
 """ Client """
-def do_register(client):
+def do_register():
     try:
         client_socket = connect_to_server()
 
@@ -11,9 +11,9 @@ def do_register(client):
 
         # The player enters a username and a password.
         message = f"REGISTER {username} {password}"
-        client.sendall(message.encode())
+        client_socket.sendall(message.encode())
         
-        response = client.recv(1024).decode()
+        response = client_socket.recv(1024).decode()
         print("Server response:", response)
 
         client_socket.close()
@@ -22,18 +22,22 @@ def do_register(client):
         print(f"Register failed due to network issue: {e}")
 
 
-def handle_register(data, client, user_db):
+def handle_register(data, client, addr, user_db):
     _, username, password = data.split()  
     
     # The game lobby server verifies whether the username already exists.
     if username in user_db:
-        client.sendall("Username already exists.\n \
-                        please enter another username for registration.".encode())
+        message = "Username already exists.\n \
+                   Please enter another username for registration."
+        print(message)
+        client.sendall(message.encode())
         return False
     else:
         # If the username does not exist, the game lobby server will store the username and password.
         user_db[username] = password
-        client.sendall("Registration successful".encode())
+        message = "Registration successful"
+        print(message)
+        client.sendall(message.encode())
         return False
 
 

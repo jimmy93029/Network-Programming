@@ -1,4 +1,3 @@
-import socket
 
 
 def print_board(board):

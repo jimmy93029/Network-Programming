@@ -1,24 +1,26 @@
-from .. connection import create_game_server, connect_to_server
+from utils.connection import create_game_server
 
 
 """Client B"""
-def do_join_game(client_socket):
+def do_join_room(client_socket):
     # Choose a public room to join
-    roomId = input("Which public room do you want to join : ")
-    client_socket.sendall(f"JOIN {roomId}")
+    roomId = input("Which public room do you want to join: ")
+    client_socket.sendall(f"JOIN {roomId}".encode())  # Encode the message to bytes
 
-    message  = client_socket.recv(1024).decode()
-    if message is not "Join request accept":
+    # Receive join confirmation
+    message = client_socket.recv(1024).decode()
+    if message != "Join request accept":
         print(message)
-        return 
+        return None, None
 
-    # Acquire ip and port
-    message = client_socket.resv(1024).decode()
+    # Acquire IP and port
+    message = client_socket.recv(1024).decode()  # Receive the IP and port message
     print(message)
-    if message.startwith("STARTUP_FAILED"):
-        return
+    if message.startswith("STARTUP_FAILED"):
+        return None, None
     
-    ip, port = message
+    # Split IP and port and handle as a tuple
+    ip, port = message.split()
     game_addr = (ip, int(port))
 
     return "In Game mode2", game_addr
@@ -26,20 +28,23 @@ def do_join_game(client_socket):
 
 """Client A"""
 def wait_for_join(client_socket):
-    message = client_socket.resv(1024).decode()
+    # Receive invitation from Client B
+    print("Waiting for client B to join...")
+    message = client_socket.recv(1024).decode()  
     print(message)
 
     # Create game server 
     game_socket1, ip_address, port = create_game_server()
-    if 
-    client_socket.sendall(f"{ip_address}, {port}".encode())
-    except:
+    if ip_address is not None:
+        client_socket.sendall(f"{ip_address} {port}".encode())
+    else:
         client_socket.sendall(b"STARTUP_FAILED")
-        print("STARTUP_FAILED : cannot create game server")
-        return
+        print("STARTUP_FAILED: Cannot create game server")
+        return  # Early return if server creation failed
     
+    # If successful, return game mode and game socket
     return "In Game mode1", game_socket1
-    
+ 
 
 """Server"""
 def handle_join(data, client, addr, rooms, online_users, login_addr):
@@ -61,8 +66,9 @@ def handle_join(data, client, addr, rooms, online_users, login_addr):
     if message == "STARTUP_FAILED":
         client.sendall("STARTUP_FAILED : Please join another public room")
         return
-    ip, port = message
-    client.sendall(f"{ip}, {port}".encode())
+    else:
+        ip, port = message
+        client.sendall(f"{ip} {port}".encode())
 
     # Change status
     joiner = login_addr[addr]

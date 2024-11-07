@@ -1,5 +1,7 @@
-from lobby import do_display, do_register, do_login, do_display
-from connection import connect_to_server
+from lobby import do_display, do_register, do_login, do_logout, do_display
+from room import do_create_room, do_invite, do_join_room, wait_for_invitation, wait_for_join
+from game import start_game1, start_game2
+from utils.connection import connect_to_server
 
 
 client_socket = None    # client for user to connect to server
@@ -20,6 +22,7 @@ def run():
 
         print("------------------------------------------------------------------\n")
 
+
 def question(status):
 
     if status == "unlogin":
@@ -33,49 +36,45 @@ def question(status):
                     (2) Join room \n\
                     (3) Wait for invitation\n\
                     (4) Logout\n\
-                    (5) Renew screen"
+                    (5) Renew screen\n"
+    else:
+        return
+    prompt = prompt + "Plealse input your choose : "
         
-    option = ""
+    option = input(prompt)
     while not option.isdigit():
-        option = input(prompt)
         print("Please input the options in number format!")
+        option = input(prompt)
         
     return option
         
 
 def do(option, status):
-    global client_socket
+    global client_socket, game_socket1, addr2
     status_ = None
     
     if status == "unlogin":
         if int(option) not in [1, 2, 3]:
             print("Please input the options in {1, 2}!")
-
         elif int(option) == 1:
             client_socket = connect_to_server()
             status_ = do_login(client_socket)
             if status_ is None:
                 client_socket.close()
-
         elif int(option) == 2:
             do_register()
-
         elif int(option) == 3:
             status_ = "exit"
 
     elif status == "idle":
         if int(option) not in [1, 2, 3, 4, 5]:
             print("Please input the options in {1, 2, 3, 4}!")
-
         elif int(option) == 1:
-            do_create_room(client_socket)
-
+            status_ = do_create_room(client_socket)
         elif int(option) == 2:
             status_, addr2 = do_join_room(client_socket)
-
         elif int(option) == 3:
-            status, addr2 = wait_for_invitation(client_socket)
-
+            status_, addr2 = wait_for_invitation(client_socket)
         elif int(option) == 4:
             status_ = do_logout(client_socket)
             if status_ is not None:
@@ -83,25 +82,27 @@ def do(option, status):
         else:
             pass
 
+    # Handle "In Room" logic
     if status.startswith("In Room"):
-        if status == "In Room private":
+        if status.endswith("private"):
             status_, game_socket1 = do_invite(client_socket)
-        elif status == "In Room public":
+        elif status.endswith("public"):
             status_, game_socket1 = wait_for_join(client_socket)
 
+    # Handle "In Game" logic
     if status.startswith("In Game"):
-        if status == "In Game mode1":
+        if status.endswith("mode1"):
             status_ = start_game1(game_socket1)
-        if status == "In Game mode2":
-            status_ = start_game2(addr2)            
-        
+        elif status.endswith("mode2"):
+            status_ = start_game2(addr2)
 
+    # Return updated status or maintain current status if status_ is None
     return status if status_ is None else status_
 
 
 # Display online status 
 def predo(status):
-    if status == "login":
+    if status != "unlogin":
         do_display(client_socket)
 
 

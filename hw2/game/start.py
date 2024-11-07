@@ -1,9 +1,9 @@
-from ..connection import connect_to_server
-from game1 import Tic_tac_toe
-from game2 import Chinese_chess
+from utils.connection import connect_to_server
+from .game1 import Tic_tac_toe
+from .game2 import dark_chess
 
 
-game_list = ["Tic_tac_toe", "Chinese_chess"]
+game_list = ["Tic_tac_toe", "dark_chess"]
 
 
 """Client A"""

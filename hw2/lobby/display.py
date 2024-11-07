@@ -13,7 +13,6 @@ def do_display(client_socket):
     
 """ Server """
 def handle_display(data, client, addr, online_users, rooms):
-    print("handle display ?\n")
     message = show_online(online_users) + "\n" + show_rooms(rooms) + "\n"
     client.sendall(message.encode())
 

@@ -6,7 +6,8 @@ from utils.connection import connect_to_server
 
 client_socket = None    # client for user to connect to server
 game_socket1 = None     # game socket controlled by room creator
-addr2 = None            # game addr for connecting to game server
+game_type = None
+game_addr = None            # game addr for connecting to game server
 
 def run():
     global client_socket
@@ -50,7 +51,7 @@ def question(status):
         
 
 def do(option, status):
-    global client_socket, game_socket1, addr2
+    global client_socket, game_socket1, game_type, game_addr
     status_ = None
     
     if status == "unlogin":
@@ -70,11 +71,11 @@ def do(option, status):
         if int(option) not in [1, 2, 3, 4, 5]:
             print("Please input the options in {1, 2, 3, 4}!")
         elif int(option) == 1:
-            status_ = do_create_room(client_socket)
+            status_, game_type = do_create_room(client_socket)
         elif int(option) == 2:
-            status_, addr2 = do_join_room(client_socket)
+            status_, game_addr, game_type = do_join_room(client_socket)
         elif int(option) == 3:
-            status_, addr2 = wait_for_invitation(client_socket)
+            status_, game_addr, game_type = wait_for_invitation(client_socket)
         elif int(option) == 4:
             status_ = do_logout(client_socket)
             if status_ is not None:
@@ -82,19 +83,17 @@ def do(option, status):
         else:
             pass
 
-    # Handle "In Room" logic
-    if status.startswith("In Room"):
+    elif status.startswith("In Room"):
         if status.endswith("private"):
             status_, game_socket1 = do_invite(client_socket)
         elif status.endswith("public"):
             status_, game_socket1 = wait_for_join(client_socket)
 
-    # Handle "In Game" logic
-    if status.startswith("In Game"):
+    elif status.startswith("In Game"):
         if status.endswith("mode1"):
-            status_ = start_game1(game_socket1)
+            status_ = start_game1(client_socket, game_socket1, game_type)
         elif status.endswith("mode2"):
-            status_ = start_game2(addr2)
+            status_ = start_game2(client_socket, game_addr, game_type)
 
     # Return updated status or maintain current status if status_ is None
     return status if status_ is None else status_

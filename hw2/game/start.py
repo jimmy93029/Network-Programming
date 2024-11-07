@@ -2,7 +2,6 @@ from utils.connection import connect_to_server
 from .game1 import Tic_tac_toe
 from .game2 import dark_chess
 
-
 game_list = ["Tic_tac_toe", "dark_chess"]
 
 
@@ -23,7 +22,7 @@ def start_game1(client_socket, game_socket1, game_type):
     if game_type == game_list[0]:
         Tic_tac_toe(PleyerA, "A")
     else:
-        Chinese_chess(PleyerA, "A")
+        dark_chess(PleyerA, "A")
 
     # 通知遊戲結束
     client_socket.sendall(b"FINISH")
@@ -44,7 +43,7 @@ def start_game2(client_socket, game_addr, game_type):
         if game_type == game_list[0]:
             Tic_tac_toe(PlayerB, "A")
         else:
-            Chinese_chess(PlayerB, "A")
+            dark_chess(PlayerB, "A")
 
     except Exception as e:
         print(f"Error during game participation: {e}")

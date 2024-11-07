@@ -15,15 +15,15 @@ def do_join_room(client_socket):
 
     # Acquire IP and port
     message = client_socket.recv(1024).decode()  # Receive the IP and port message
-    print(message)
+    print(f"Server response : {message}")
     if message.startswith("STARTUP_FAILED"):
         return None, None
-    
-    # Split IP and port and handle as a tuple
-    ip, port = message.split()
-    game_addr = (ip, int(port))
+    else:
+        # Split IP and port and handle as a tuple
+        ip, port, game_type = message.split()
+        game_addr = (ip, int(port))
 
-    return "In Game mode2", game_addr
+    return "In Game mode2", game_addr, game_type
 
 
 """Client A"""
@@ -31,7 +31,7 @@ def wait_for_join(client_socket):
     # Receive invitation from Client B
     print("Waiting for client B to join...")
     message = client_socket.recv(1024).decode()  
-    print(message)
+    print(f"Server response : {message}")
 
     # Create game server 
     game_socket1, ip_address, port = create_game_server()
@@ -50,34 +50,40 @@ def wait_for_join(client_socket):
 def handle_join(data, client, addr, rooms, online_users, login_addr):
     # Check if room Id available
     _, roomId = data.split()
-    if rooms[roomId]["status"] == "In game":
+    if roomId not in rooms:
+        client.sendall(b"Room does not exist")
+        return
+    
+    if rooms[roomId]["status"] == "In Game":
         client.sendall(b"Room is full")
+        return
     elif rooms[roomId]["room_type"] == "private":
         client.sendall(b"Cannot join private room")
+        return
     else:
         client.sendall(b"Join request accept")
 
-    # Request Game Ip, port
+    # Request Game IP, port
     creator = rooms[roomId]["creator"]
     creator_socket = online_users[creator]["socket"]
-    creator_socket.sendall(b"Request game Ip, port")
-    message = creator_socket.resv(1024).encode()
+    creator_socket.sendall(b"Request game IP, port")
 
+    # Receive IP and port from the creator
+    message = creator_socket.recv(1024).decode()  # Corrected `recv` and added `decode`
+    
     if message == "STARTUP_FAILED":
-        client.sendall("STARTUP_FAILED : Please join another public room")
+        client.sendall(b"STARTUP_FAILED: Please join another public room")
         return
     else:
-        ip, port = message
-        client.sendall(f"{ip} {port}".encode())
+        # Parse IP and port if provided correctly
+        ip, port = message.split()
+        game_type = rooms[roomId]["game_type"]
+        client.sendall(f"{ip} {port} {game_type}".encode())
 
     # Change status
     joiner = login_addr[addr]
     rooms[roomId]["status"] = "In Game"
     online_users[creator]["status"] = "In Game"
     online_users[joiner]["status"] = "In Game"
-
-
-def catch_server_error():
-    pass
 
 

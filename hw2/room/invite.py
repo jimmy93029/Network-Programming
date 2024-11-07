@@ -14,7 +14,7 @@ def do_invite(client_socket):
     try:
         game_socket1, ip_address, port = create_game_server()
         client_socket.sendall(f"{ip_address} {port}".encode())
-        return "In Game", game_socket1
+        return "In Game mode1", game_socket1
     except:
         client_socket.sendall(b"STARTUP_FAILED Room creator unable to start the game server")
 
@@ -36,10 +36,10 @@ def wait_for_invitation(client_socket):
         if message == "STARTUP_FAILED":
             return
         else:
-            ip_address, port = message 
+            ip_address, port, game_type = message 
 
         game_addr = (ip_address, int(port))
-        return "In Game", game_addr
+        return "In Game mode2", game_addr, game_type
 
 
 """Server"""
@@ -70,11 +70,12 @@ def handle_invite(data, client, addr, login_addr, online_users, rooms):
         if message.startwith("STARTUP_FAILED"):
             invitee_socket.sendall("STARTUP_FAILED")
             return
-        
-        ip_address, port = message  
-        invitee_socket.sendall(f"{ip_address} {port}")
 
-        roomId = next((key for key, info in rooms.items() if info["creator"] == inviter), None)
+        roomId = next((key for key, info in rooms.items() if info["creator"] == inviter), None)   
+        game_type = rooms[roomId]["game_type"]
+        ip_address, port = message  
+        invitee_socket.sendall(f"{ip_address} {port} {game_type}")
+    
         rooms[roomId]["status"] = "In Game"
         online_users[inviter]["status"] = "In Game"
         online_users[invitee]["status"] = "In Game"

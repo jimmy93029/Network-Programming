@@ -1,0 +1,5 @@
+# ignore _pycache_
+game/_pycache_
+lobby/_pycache_
+room/_pycache_
+utils/_pycache_

@@ -1,5 +1,2 @@
 # ignore _pycache_
-hw2/game/_pycache_
-hw2/lobby/_pycache_
-hw2/room/_pycache_
-hw2/utils/_pycache_
+**/__pycache__/

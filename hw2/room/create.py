@@ -1,5 +1,5 @@
 from game.start import game_list
-
+from utils.tools import select_type
 
 room_list = ["private", "public"]
 
@@ -25,22 +25,6 @@ def do_create_room(client_socket, retry=0):
         print(f"Create Room failed due to network issue: {e}")
         if not retry:
             return do_create_room(client_socket, retry=1)
-
-
-def selects_type(choice_name, choice_list, choice="0"): 
-
-    while not choice.isdigit() or int(choice) not in [1, 2]:
-        choice = input(f"Which {choice_name} do you want? \n\
-                        (1) {choice_list[0]} \n\
-                        (2) {choice_list[1]} \n\
-                        Please input your choose : ")
-
-        if not choice.isdigit():
-            print(f"Please input {choice_name} as a digit.")
-        elif int(choice) not in [1, 2]:
-            print(f"Please input {choice_name} as a number from {{1, 2}}.")
-
-    return int(choice)
 
 
 """ Server """

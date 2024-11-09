@@ -64,18 +64,20 @@ def handle_invite(data, client, addr, login_addr, online_users, rooms):
             client.sendall(f"declined".encode())
             return
 
-        # give messages
+        # check messages
         client.sendall(f"accepted".encode())
         message = client.recv(1024).decode()
         if message.startwith("STARTUP_FAILED"):
             invitee_socket.sendall("STARTUP_FAILED")
             return
 
+        # give messages to joiner
         roomId = next((key for key, info in rooms.items() if info["creator"] == inviter), None)   
         game_type = rooms[roomId]["game_type"]
         ip_address, port = message  
         invitee_socket.sendall(f"{ip_address} {port} {game_type}")
     
+        # change status
         rooms[roomId]["status"] = "In Game"
         online_users[inviter]["status"] = "In Game"
         online_users[invitee]["status"] = "In Game"

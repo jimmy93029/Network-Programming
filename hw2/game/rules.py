@@ -18,10 +18,23 @@ def init_chinese_chess_board():
     return board, hidden_board
 
 
+def get_board(socket, Me):
+    if Me == "A":
+        board, hidden_board = init_chinese_chess_board()
+        board_data = "".join("".join(row) for row in hidden_board)
+        socket.send(board_data.encode())  # Send encoded hidden_board as a single string
+    else:
+        board = [["*" for _ in range(8)] for _ in range(4)]
+        board_data = socket.recv(2048).decode()  # Increase buffer size if necessary
+        hidden_board = [list(board_data[i*8:(i+1)*8]) for i in range(4)]  # Ensure nested list
+
+    return board, hidden_board
+
+
 def colored_piece(piece):
     """Return the piece with color coding based on its team."""
-    red_pieces = "帥仕相車馬砲兵"
-    blue_pieces = "将士象车马炮卒"
+    red_pieces = "帥仕相車馬砲兵A"
+    blue_pieces = "將士象车马炮卒B"
     
     if piece in red_pieces:
         return RED + piece + RESET
@@ -32,11 +45,17 @@ def colored_piece(piece):
 
 
 def print_chinese_chess_board(board):
-    """Display the board with flipped pieces and color-coded based on teams."""
-    print("  0 1 2 3 4 5 6 7")  # Column indices
+    """Display the board with improved alignment for row and column indicators."""
+    # Print column headers
+    col_header = "   " + "  ".join(map(str, range(8)))
+    print(col_header)
+    print("  +" + "---+" * 8)
+
+    # Print each row with row index
     for i, row in enumerate(board):
-        colored_row = [colored_piece(cell) for cell in row]
-        print(f"{i} " + " ".join(colored_row))
+        formatted_row = f"{i} | " + " | ".join(row) + " |"
+        print(formatted_row)
+        print("  +" + "---+" * 8)
 
 
 def flip_piece(board, hidden_board, row, col):
@@ -45,7 +64,7 @@ def flip_piece(board, hidden_board, row, col):
         print("Piece is already flipped!")
         return False
     board[row][col] = hidden_board[row][col]  # Reveal the actual piece
-    hidden_board[row][col] = "*"
+    hidden_board[row][col] = " "  # Update the hidden board to mark as flipped
     return True
 
 
@@ -93,20 +112,20 @@ def is_valid_move_dark_chess(board, start_row, start_col, end_row, end_col, play
 def is_valid_eat(attacker, defender):
     """Determine if the attacker can eat the defender based on dark chess rules."""
     hierarchy = {
-        "帥": ["仕", "相", "車", "馬", "砲"],
-        "將": ["士", "象", "车", "马", "炮"],
-        "仕": ["相", "車", "馬", "砲", "兵"],
-        "士": ["象", "车", "马", "炮", "卒"],
-        "相": ["車", "馬", "砲", "兵"],
-        "象": ["车", "马", "炮", "卒"],
-        "車": ["馬", "砲", "兵"],
-        "车": ["马", "炮", "卒"],
-        "馬": ["砲", "兵"],
-        "马": ["炮", "卒"],
-        "砲": ["兵"],
-        "炮": ["卒"],
-        "兵": ["帥", "將"],
-        "卒": ["帥", "將"]
+        "帥": ["士", "象", "车", "马", "炮"],
+        "將": ["仕", "相", "車", "馬", "砲"],
+        "仕": ["象", "车", "马", "炮", "卒"],
+        "士": ["相", "車", "馬", "砲", "兵"],
+        "相": ["车", "马", "炮", "卒"],
+        "象": ["車", "馬", "砲", "兵"],
+        "車": ["马", "炮", "卒"],
+        "车": ["馬", "砲", "兵"],
+        "馬": ["炮", "卒"],
+        "马": ["砲", "兵"],
+        "砲": ["卒"],
+        "炮": ["兵"],
+        "兵": ["將"],
+        "卒": ["帥"]
     }
     return defender in hierarchy.get(attacker, [])
 
@@ -130,16 +149,3 @@ def is_valid_cannon_move(board, start_row, start_col, end_row, end_col):
         return count_between == 0
     else:
         return count_between == 1
-
-
-def get_board(socket, Me):
-    if Me == "A":
-        board, hidden_board = init_chinese_chess_board()
-        board_data = ",".join("".join(row) for row in hidden_board)
-        socket.send(board_data.encode())  # Send encoded hidden_board as a single string
-    else:
-        board = [["*" for _ in range(8)] for _ in range(4)]
-        board_data = socket.recv(1024).decode()
-        hidden_board = [list(board_data[i:i+8]) for i in range(0, len(board_data), 8)]
-
-    return board, hidden_board

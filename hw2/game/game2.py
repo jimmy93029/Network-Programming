@@ -1,5 +1,5 @@
 from utils.tools import select_type
-from .rules import init_chinese_chess_board, print_chinese_chess_board, flip_piece, is_valid_move_dark_chess, get_board
+from .rules import init_chinese_chess_board, print_chinese_chess_board, flip_piece, is_valid_move_dark_chess, get_board, colored_piece
 
 
 def check_victory(board, hidden_board):
@@ -48,7 +48,7 @@ def dark_chess(socket, Me):
 
         if current_player == Me:
             # Player's turn: choose between flipping or moving
-            idx = select_type("Choose action", actions)
+            idx = select_type(f"Choose action for {colored_piece(Me)}", actions)
             action = actions[idx-1]
 
             if action == "flip":
@@ -84,7 +84,7 @@ def dark_chess(socket, Me):
 
         else:
             # Opponent's turn: wait for their action
-            print(f"Waiting for Player {opponent}'s action...")
+            print(f"Waiting for Player {colored_piece(opponent)}'s action...")
             data = socket.recv(1024).decode()
             action, *params = data.split()
 

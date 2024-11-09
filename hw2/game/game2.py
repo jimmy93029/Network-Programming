@@ -1,11 +1,13 @@
 from utils.tools import select_type
-from rules import init_chinese_chess_board, print_chinese_chess_board, flip_piece, is_valid_move_dark_chess
+from .rules import init_chinese_chess_board, print_chinese_chess_board, flip_piece, is_valid_move_dark_chess, get_board
 
 
-def check_victory(board):
+def check_victory(board, hidden_board):
     """Check if either side has no pieces left, indicating a victory for the other side."""
-    red_pieces = any(piece in "帥仕相車馬砲兵" for row in board for piece in row)
-    black_pieces = any(piece in "将士象车马炮卒" for row in board for piece in row)
+    red_pieces = any(piece in "帥仕相車馬砲兵" for row in board for piece in row) + \
+                    any(piece in "帥仕相車馬砲兵" for row in hidden_board for piece in row)
+    black_pieces = any(piece in "将士象车马炮卒" for row in board for piece in row) + \
+                   any(piece in "将士象车马炮卒" for row in hidden_board for piece in row)
     if not red_pieces:
         return "B"  # Black wins
     elif not black_pieces:
@@ -22,8 +24,9 @@ def check_draw(move_count, last_capture_move):
 
 def dark_chess(socket, Me):
     """Main game function to play dark chess using a socket connection."""
-    board, hidden_board = init_chinese_chess_board()
-    current_player = Me
+
+    board, hidden_board = get_board(socket, Me)
+    current_player = "A"
     opponent = "A" if Me == "B" else "B"
     move_count = 0  # Count total moves
     last_capture_move = 0  # Track last move when a piece was captured
@@ -33,7 +36,7 @@ def dark_chess(socket, Me):
         print_chinese_chess_board(board)
 
         # Check for victory condition after each move
-        winner = check_victory(board)
+        winner = check_victory(board, hidden_board)
         if winner:
             print(f"Game Over. Player {winner} wins!")
             break
@@ -46,7 +49,7 @@ def dark_chess(socket, Me):
         if current_player == Me:
             # Player's turn: choose between flipping or moving
             idx = select_type("Choose action", actions)
-            action = actions[idx]
+            action = actions[idx-1]
 
             if action == "flip":
                 try:

@@ -87,15 +87,17 @@ def handle_join2(data, client, addr, rooms, online_users, login_addr):
         joiner_socket.sendall(b"STARTUP_FAILED: Please join another public room")
         return
 
-    # Parse IP and port if provided correctly
-    ip, port = message.split(',')
-    game_type = rooms[roomId]["game_type"]
-    joiner_socket.sendall(f"{ip} {port} {game_type}".encode())
-
     # Change status
     rooms[roomId]["status"] = "In Game"
     rooms[roomId]["participant"] = joiner
     online_users[creator]["status"] = "In Game"
     online_users[joiner]["status"] = "In Game"
+    
+    # Parse IP and port if provided correctly
+    ip, port = message.split(',')
+    game_type = rooms[roomId]["game_type"]
+    joiner_socket.sendall(f"{ip} {port} {game_type}".encode())
+
+
 
 

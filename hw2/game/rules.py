@@ -45,6 +45,7 @@ def flip_piece(board, hidden_board, row, col):
         print("Piece is already flipped!")
         return False
     board[row][col] = hidden_board[row][col]  # Reveal the actual piece
+    hidden_board[row][col] = "*"
     return True
 
 
@@ -129,3 +130,16 @@ def is_valid_cannon_move(board, start_row, start_col, end_row, end_col):
         return count_between == 0
     else:
         return count_between == 1
+
+
+def get_board(socket, Me):
+    if Me == "A":
+        board, hidden_board = init_chinese_chess_board()
+        board_data = ",".join("".join(row) for row in hidden_board)
+        socket.send(board_data.encode())  # Send encoded hidden_board as a single string
+    else:
+        board = [["*" for _ in range(8)] for _ in range(4)]
+        board_data = socket.recv(1024).decode()
+        hidden_board = [list(board_data[i:i+8]) for i in range(0, len(board_data), 8)]
+
+    return board, hidden_board

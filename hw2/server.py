@@ -2,6 +2,7 @@ import threading
 from utils.connection import bind_server
 from lobby import handle_register, handle_login1, handle_login2, handle_logout, handle_display
 from room import handle_create_room, handle_invite, handle_join1, handle_join2
+from game import handle_game_start, handle_game_ending
 
 
 user_db = {}        # key : user name, value = password
@@ -65,11 +66,14 @@ def handle(data, client, addr):
     elif data.startswith("JOIN2"):
         handle_join2(data, client, addr, rooms, online_users, login_addr)
 
-    # # game related
-    # if data.startwith("FINISH"):
-    #     handle_game_ending()
+    # game related
+    if data.startswith("FINISH"):
+        handle_game_ending(data, client, addr, rooms, login_addr, online_users)
+    elif data.startswith("START"):  
+        handle_game_start(data, client, addr, rooms, login_addr, online_users)
 
     return exit
+
 
 if __name__ == "__main__":
     run()

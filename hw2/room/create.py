@@ -7,8 +7,8 @@ room_list = ["private", "public"]
 def do_create_room(client_socket, retry=0):
 
     try:
-        game_idx = selects_type(choice_name="game type", choice_list=game_list)
-        room_idx = selects_type(choice_name="room type", choice_list=room_list)
+        game_idx = select_type(choice_name="game type", choice_list=game_list)
+        room_idx = select_type(choice_name="room type", choice_list=room_list)
     
         message = f"CREATE {game_list[game_idx-1]} {room_list[room_idx-1]}"
         client_socket.sendall(message.encode())

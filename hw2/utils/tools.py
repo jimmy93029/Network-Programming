@@ -1,6 +1,6 @@
 
 
-def selects_type(choice_name, choice_list, choice="0"): 
+def select_type(choice_name, choice_list, choice="0"): 
 
     while not choice.isdigit() or int(choice) not in [1, 2]:
         choice = input(f"Which {choice_name} do you want? \n\

@@ -1,7 +1,7 @@
 import socket
 
 HOST = '127.0.0.1'  # Server IP
-PORT = 10003        # Port 
+PORT = 10004        # Port 
 
 
 def bind_server():
@@ -26,7 +26,7 @@ def create_game_server():
             game_socket.bind(('', 0))  # Bind to all interfaces and let the OS choose a port
             game_socket.listen(5)
 
-            # Get the chosen port
+            # Get the chosen por
             port = game_socket.getsockname()[1]
 
             # Get the actual IP address of the server

@@ -30,7 +30,7 @@ def dark_chess(socket, Me):
     opponent = "A" if Me == "B" else "B"
     move_count = 0  # Count total moves
     last_capture_move = 0  # Track last move when a piece was captured
-    actions = ["flip", "move"]
+    actions = ["flip", "move", "surrender"]
 
     while True:
         print_chinese_chess_board(board)
@@ -81,6 +81,10 @@ def dark_chess(socket, Me):
                 except ValueError:
                     print("Invalid input. Please enter four integers separated by spaces.")
                     continue
+            elif action == "surrender":
+                socket.send(f"surrender {Me}".encode())
+                print(f"Game Over. Player {opponent} wins!")
+                break     
 
         else:
             # Opponent's turn: wait for their action
@@ -97,6 +101,9 @@ def dark_chess(socket, Me):
                     last_capture_move = move_count  # Reset capture count for opponent's capture
                 board[end_row][end_col] = board[start_row][start_col]
                 board[start_row][start_col] = " "
+            elif action == "surrender":
+                print(f"Game Over. Player {Me} wins!")
+                break      
 
         move_count += 1  # Increment move count
         current_player = opponent if current_player == Me else Me

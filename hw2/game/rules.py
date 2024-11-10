@@ -5,6 +5,8 @@ RED = "\033[31m"
 BLUE = "\033[34m"
 RESET = "\033[0m"
 
+red_pieces = "帥仕相車馬砲兵A"
+blue_pieces = "將士象车马炮卒B"
 
 def init_chinese_chess_board():
     """Initialize the board with shuffled pieces and hidden pieces represented by '*'."""
@@ -33,8 +35,6 @@ def get_board(socket, Me):
 
 def colored_piece(piece):
     """Return the piece with color coding based on its team."""
-    red_pieces = "帥仕相車馬砲兵A"
-    blue_pieces = "將士象车马炮卒B"
     
     if piece in red_pieces:
         return RED + piece + RESET
@@ -53,7 +53,8 @@ def print_chinese_chess_board(board):
 
     # Print each row with row index
     for i, row in enumerate(board):
-        formatted_row = f"{i} | " + " | ".join(row) + " |"
+        # Use colored_piece function to color each piece in the row
+        formatted_row = f"{i} | " + " | ".join(colored_piece(piece) for piece in row) + " |"
         print(formatted_row)
         print("  +" + "---+" * 8)
 
@@ -79,9 +80,9 @@ def is_valid_move_dark_chess(board, start_row, start_col, end_row, end_col, play
         return False
 
     # Ensure players only move their own pieces
-    if player == "A" and piece not in "帥仕相車馬砲兵":
+    if player == "A" and piece not in red_pieces:
         return False
-    if player == "B" and piece not in "将士象车马炮卒":
+    if player == "B" and piece not in blue_pieces:
         return False
 
     # For non-cannon pieces, only one-step moves are allowed
@@ -96,10 +97,10 @@ def is_valid_move_dark_chess(board, start_row, start_col, end_row, end_col, play
 
     # Check capture rules
     if target != " ":
-        if player == "A" and target in "帥仕相車馬砲兵":
+        if player == "A" and target in red_pieces:
             print("You can't eat your own piece.")
             return False
-        if player == "B" and target in "将士象车马炮卒":
+        if player == "B" and target in blue_pieces:
             print("You can't eat your own piece.")
             return False
         if not is_valid_eat(piece, target):
@@ -112,20 +113,20 @@ def is_valid_move_dark_chess(board, start_row, start_col, end_row, end_col, play
 def is_valid_eat(attacker, defender):
     """Determine if the attacker can eat the defender based on dark chess rules."""
     hierarchy = {
-        "帥": ["士", "象", "车", "马", "炮"],
-        "將": ["仕", "相", "車", "馬", "砲"],
-        "仕": ["象", "车", "马", "炮", "卒"],
-        "士": ["相", "車", "馬", "砲", "兵"],
-        "相": ["车", "马", "炮", "卒"],
-        "象": ["車", "馬", "砲", "兵"],
-        "車": ["马", "炮", "卒"],
-        "车": ["馬", "砲", "兵"],
-        "馬": ["炮", "卒"],
-        "马": ["砲", "兵"],
-        "砲": ["卒"],
-        "炮": ["兵"],
-        "兵": ["將"],
-        "卒": ["帥"]
+        "帥": ["將", "士", "象", "车", "马", "炮"],
+        "將": ["帥", "仕", "相", "車", "馬", "砲"],
+        "仕": ["士", "象", "车", "马", "炮", "卒"],
+        "士": ["仕", "相", "車", "馬", "砲", "兵"],
+        "相": ["象", "车", "马", "炮", "卒"],
+        "象": ["相", "車", "馬", "砲", "兵"],
+        "車": ["车", "象", "车", "马", "炮", "卒"],
+        "车": ["車", "馬", "砲", "兵"],
+        "馬": ["马", "炮", "卒"],
+        "马": ["馬", "砲", "兵"],
+        "砲": ["將", "士", "象", "车", "马", "炮", "卒"],
+        "炮": ["帥", "仕", "相", "車", "馬", "砲", "兵"],
+        "兵": ["卒", "將"],
+        "卒": ["兵", "帥"]
     }
     return defender in hierarchy.get(attacker, [])
 

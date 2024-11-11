@@ -1,15 +1,15 @@
 import threading
 from utils.connection import bind_server
 from lobby import handle_register, handle_login1, handle_login2, handle_logout, handle_display
-from room import handle_create_room, handle_invite, handle_join1, handle_join2
+from room import handle_create_room, handle_invite1, handle_invite2, handle_invite3, handle_join1, handle_join2
 from game import handle_game_start, handle_game_ending
 
 
 user_db = {}        # key : user name, value = password
-online_users = {}   # key : user name, value = status, socket
-rooms = {}          # key : room id, value = creator, game type, room type, *participant and room status
+online_users = {}   # key : user name, value(dict) = status, socket
+rooms = {}          # key : room id, value(dict) = creator, game type, room type, *participant and room status
 login_addr = {}     # key : addr, value = username
-
+mailbox = {}        # key : invitee, value = inviter
 
 def run():
     server_socket = bind_server()
@@ -59,8 +59,12 @@ def handle(data, client, addr):
     # room related
     if data.startswith("CREATE"):
         handle_create_room(data, client, addr, rooms, login_addr, online_users)
-    elif data.startswith("INVITE"):
-        handle_invite(data, client, addr, online_users, rooms)
+    elif data.startswith("INVITE1"):
+        handle_invite1(data, client, addr, login_addr, online_users, mailbox)
+    elif data.startswith("INVITE2"):
+        handle_invite2(data, client, addr, login_addr, online_users, mailbox)
+    elif data.startswith("INVITE3"):
+        handle_invite3(data, client, addr, login_addr, online_users, rooms, mailbox)
     elif data.startswith("JOIN1"):
         handle_join1(data, client, addr, rooms, online_users, login_addr)
     elif data.startswith("JOIN2"):

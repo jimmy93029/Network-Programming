@@ -2,11 +2,11 @@ from utils.connection import connect_to_server
 from utils.tools import select_type
 from .game1 import Tic_tac_toe
 from .game2 import dark_chess
+import time
 
 game_list = ["Tic_tac_toe", "dark_chess"]
 
-
-"""Client A"""
+""" Client A """
 def start_game1(client_socket, game_socket1, game_type):
     """
     The room creator starts the game server and manages game logic.
@@ -17,16 +17,16 @@ def start_game1(client_socket, game_socket1, game_type):
         - Game starts automatically when two players are in the room.
     """
     print("Waiting for Player B to connect...")
-    message = client_socket.recv(1024).decode()
+    message = client_socket.recv(1024).decode()  # Wait for a message from the lobby server
     print(message)
     if message == "PlayerB exit":
-        return
+        return "idle"  # If Player B exits, return "idle" to reset state
 
-    # Accept the connection from Player B
+    # Accept connection from Player B
     PlayerA, _ = game_socket1.accept()
     print("Player B connected.")
 
-    # Start the game session based on the selected game type
+    # Start the appropriate game session based on the selected game type
     if game_type == game_list[0]:
         Tic_tac_toe(PlayerA, "A")
     else:
@@ -34,12 +34,14 @@ def start_game1(client_socket, game_socket1, game_type):
 
     # Notify the lobby server that the game has ended
     client_socket.sendall(b"FINISH")
-    game_socket1.close()
+    time.sleep(4)
+    PlayerA.close()  # Close Player A’s socket after game completion
+    game_socket1.close()  # Close the game server socket
 
     return "idle"
 
 
-"""Client B"""
+""" Client B """
 def start_game2(client_socket, game_addr, game_type):
     """
     The room joiner connects to the game server and participates in the game.
@@ -50,22 +52,21 @@ def start_game2(client_socket, game_addr, game_type):
     # Attempt to connect to the game server as Player B
     try:
         print("Connecting to Game Server as Participant...")
-        PlayerB = connect_to_server(game_addr)
-        client_socket.sendall("START successfully".encode())
+        PlayerB = connect_to_server(game_addr)  # Connect to game server
+        client_socket.sendall(b"START successfully")
 
     except Exception as e:
         print(f"Error during game participation: {e}")
         retry(client_socket, game_addr, game_type)
-        return
- 
-    # Start the game session based on the selected game type
+        return "idle"  # Return "idle" if an error occurs
+
+    # Start the appropriate game session based on the selected game type
     if game_type == game_list[0]:
         Tic_tac_toe(PlayerB, "B")
     else:
         dark_chess(PlayerB, "B")
 
-    # Close Player B's connection after the game ends
-    PlayerB.close()
+    PlayerB.close()  # Close Player B’s socket after game completion
 
     return "idle"
 
@@ -80,9 +81,9 @@ def retry(client_socket, game_addr, game_type):
     idx = select_type("options", options)
 
     if options[idx-1] == "reconnect":
-        start_game2(client_socket, game_addr, game_type)
+        start_game2(client_socket, game_addr, game_type)  # Retry connecting
     else:
-        client_socket.sendall("START_GAME failed".encode())
+        client_socket.sendall(b"START_GAME failed")  # Send failure message to lobby server
         print("Exited the room.")
 
 
@@ -118,7 +119,7 @@ def handle_game_ending(data, client, addr, rooms, login_addr, online_users):
     roomId = next((key for key, info in rooms.items() if info["creator"] == playera), None)
     playerb = rooms[roomId]["participant"]
     
-    # Update statuses to idle and remove room from public list
+    # Update player statuses to "idle" and remove the room from the public list
     rooms.pop(roomId, None)
     online_users[playera]["status"] = "idle"
     online_users[playerb]["status"] = "idle"

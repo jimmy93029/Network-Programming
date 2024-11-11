@@ -1,5 +1,5 @@
 from lobby import do_display, do_register, do_login, do_logout, do_display
-from room import do_create_room, do_invite, do_join_room, wait_for_invitation, wait_for_join
+from room import do_create_room, do_invite, do_join_room, check_invitation, wait_for_join
 from game import start_game1, start_game2
 from utils.connection import connect_to_server
 
@@ -14,7 +14,8 @@ def run():
     status = "unlogin"
 
     while True:
-        predo(status)
+        print(f"Your status = {status}")
+        status = predo(status)
         option = question(status)
 
         status = do(option, status)
@@ -35,9 +36,8 @@ def question(status):
         prompt = "Which options do you want? \n\
                     (1) Create room \n\
                     (2) Join room \n\
-                    (3) Wait for invitation\n\
-                    (4) Logout\n\
-                    (5) Renew screen\n"
+                    (3) Logout\n\
+                    (4) Renew screen\n"
     else:
         return
     prompt = prompt + "Plealse input your choose : "
@@ -68,15 +68,13 @@ def do(option, status):
             status_ = "exit"
 
     elif status == "idle":
-        if int(option) not in [1, 2, 3, 4, 5]:
+        if int(option) not in [1, 2, 3, 4]:
             print("Please input the options in {1, 2, 3, 4}!")
         elif int(option) == 1:
             status_, game_type = do_create_room(client_socket)
         elif int(option) == 2:
             status_, game_addr, game_type = do_join_room(client_socket)
         elif int(option) == 3:
-            status_, game_addr, game_type = wait_for_invitation(client_socket)
-        elif int(option) == 4:
             status_ = do_logout(client_socket)
             if status_ is not None:
                 client_socket.close()
@@ -95,14 +93,21 @@ def do(option, status):
         elif status.endswith("mode2"):
             status_ = start_game2(client_socket, game_addr, game_type)
 
-    # Return updated status or maintain current status if status_ is None
     return status if status_ is None else status_
 
 
 # Display online status 
 def predo(status):
+    global client_socket, game_type, game_addr
+    status_ = None
+
     if status != "unlogin":
         do_display(client_socket)
+    
+    if status == "idle":
+        status_, game_addr, game_type = check_invitation(client_socket)
+
+    return status if status_ is None else status_
 
 
 if __name__ == "__main__":

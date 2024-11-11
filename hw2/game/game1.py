@@ -1,4 +1,4 @@
-
+from utils.tools import select_type
 
 def print_board(board):
     """Print the current state of the board."""
@@ -29,6 +29,7 @@ def is_draw(board):
 def Tic_tac_toe(socket, player):
     """General game logic for Tic-Tac-Toe."""
     board = [[" " for _ in range(3)] for _ in range(3)]
+    actions = ['1', '2', '3']
     current_player = "X"  # Player A starts with "X"
     print(f"Connected as Player {player}.")
 
@@ -38,8 +39,8 @@ def Tic_tac_toe(socket, player):
         if (current_player == "X" and player == "A") or (current_player == "O" and player == "B"):
             # Player's turn
             print("Your turn.")
-            row = int(input("Enter row (1-3): ")) - 1
-            col = int(input("Enter column (1-3): ")) - 1
+            row = select_type("rows", actions) - 1
+            col = select_type("cols", actions) - 1
 
             if row not in range(3) or col not in range(3) or board[row][col] != " ":
                 print("Invalid move. Try again.")
@@ -68,4 +69,3 @@ def Tic_tac_toe(socket, player):
         # Switch players
         current_player = "O" if current_player == "X" else "X"
 
-    socket.close()

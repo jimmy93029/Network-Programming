@@ -2,51 +2,56 @@ from utils.connection import create_game_server
 from utils.tools import select_type
 import time
 
+
 """Client A"""
 def do_invite(client_socket):
-    invitee = input("Which idle user do you want to choose : ")
+    invitee = input("Which idle user do you want to choose: ")
     client_socket.sendall(f"INVITE1 {invitee}".encode())
+    print("Waiting for response...")
 
     response = client_socket.recv(1024).decode()
     print(response)
     if response != "accepted":
-        return 
-
+        return None, None
+    
     try:
         game_socket1, ip_address, port = create_game_server()
-        client_socket.sendall(f"INVITE3 {ip_address},{port}".encode())
+        client_socket.sendall(f"INVITE4 {ip_address},{port}".encode())
         time.sleep(3)
         return "In Game mode1", game_socket1
     except:
         client_socket.sendall(b"STARTUP_FAILED")
         time.sleep(3)
+        return None, None
 
 
 """Client B"""
-def wait_for_invitation(client_socket):
-    print("Waiting for an invitation...")
+def check_invitation(client_socket):
+    client_socket.sendall(b"INVITE2")
+    check = client_socket.recv(1024).decode()
+    print(check)
+    if check == "you are not invited":
+        return None, None, None
 
-    question = client_socket.recv(1024).decode()
-    print(question)
-    inviter = question.strip()[-1]
-
+    # decline or not
     answers = ["yes", "no"]
     idx = select_type("choices", answers)
 
     if answers[idx-1] == "yes":
-        client_socket.sendall(f"INVITE2 accepted {inviter}".encode())
+        client_socket.sendall("INVITE3 accepted".encode())
     else:
-        client_socket.sendall(f"INVITE2 declined {inviter}".encode())
-        return 
-    
-    message  = client_socket.recv(1024).decode()
-    if message == "STARTUP_FAILED":
-        return
-    else:
-        ip_address, port, game_type = message 
+        client_socket.sendall("INVITE3 declined".encode())
+        return None, None, None
 
-    game_addr = (ip_address, int(port))
-    return "In Game mode2", game_addr, game_type
+    # acquire game ip address
+    message = client_socket.recv(1024).decode()
+    if message == "STARTUP_FAILED":
+        print("Game server failed to start.")
+        return None, None, None
+    else:
+        ip_address, port, game_type = message.split(",")
+        game_addr = (ip_address, int(port))
+        return "In Game mode2", game_addr, game_type
 
 
 """Server"""
@@ -60,61 +65,75 @@ def handle_invite1(data, client, addr, login_addr, online_users, mailbox):
             client.sendall(b"Invite failed: Invitee is not connected")
             return
         elif online_users[invitee]["status"] != "idle":
-            client.sendall(b"Invite is not idle ! Please invite anther one")
+            client.sendall(b"Invite failed: User is not idle")
+            return
 
-        # get invitee reply
-        invitee_socket = online_users["socket"]
-        mailbox[f"{invitee}"] = inviter
+        # record invitation
+        mailbox[invitee] = inviter
 
     except Exception as e:
-        print(f"Error during handling invite: {e}")
+        print(f"Error during handling invite1: {e}")
+        client.sendall(b"Invite handling failed.")
 
 
-def handle_invite2(data, client, addr, login_addr, online_users, mailbox):
+def handle_invite2(data, client, addr, login_addr, mailbox):
     try:
-        checker = login_addr[addr]
-        if checker not in mailbox:
-            return
-        
-        inviter = mailbox[checker]["inviter"]
-        client.sendall(f"You have been invited by {inviter}. Do you accept the invitation?".encode())
+        invitee = login_addr[addr]
 
-        _ , reply, inviter = data.split()
+        if invitee not in mailbox:
+            client.sendall(b"you are not invited")
+            return
+        else:
+            inviter = mailbox[invitee]
+            client.sendall(f"You have been invited by {inviter}. Do you accept the invitation?".encode())
+
+    except Exception as e:
+        print(f"Error during handling invite2: {e}")
+
+
+def handle_invite3(data, client, addr, login_addr, online_users, mailbox):
+    try:
+        _, reply = data.split()
+
+        invitee = login_addr[addr]
+        inviter = mailbox[invitee]
         inviter_socket = online_users[inviter]["socket"]
 
-        # check whether declined
+        # process invitation response
         if reply == "declined":
-            inviter_socket.sendall(f"declined".encode())
+            inviter_socket.sendall(b"declined")
+            del mailbox[invitee]  # clear mailbox entry after declining
         else:
-            inviter_socket.sendall(f"accepted".encode())
+            inviter_socket.sendall(b"accepted")
+
     except Exception as e:
-        print(f"Error during handling invite: {e}")
+        print(f"Error during handling invite3: {e}")
 
 
-def handle_invite3(data, server_to_inviter, addr, login_addr, online_users, rooms, mailbox):
+def handle_invite4(data, server_to_inviter, addr, login_addr, online_users, rooms, mailbox):
     try:
-        _, message = data.split()
+        _, message = data.split(maxsplit=1)
 
         inviter = login_addr[addr]
-        invitee = next((key for key, info in mailbox.items() if info == inviter), None)   
+        invitee = next((key for key, info in mailbox.items() if info == inviter), None)
         server_to_invitee = online_users[invitee]["socket"]
-        roomId = next((key for key, info in rooms.items() if info["creator"] == inviter), None)   
+        roomId = next((key for key, info in rooms.items() if info["creator"] == inviter), None)
         game_type = rooms[roomId]["game_type"]
+        del mailbox[invitee]
 
-        # check whether startup failed
-        if message.startwith("STARTUP_FAILED"):
-            server_to_invitee.sendall("STARTUP_FAILED")
+        # check game server startup status
+        if message.startswith("STARTUP_FAILED"):
+            server_to_invitee.sendall(b"STARTUP_FAILED")
             return
         else:
-            # give messages to joiner
             ip_address, port = message.split(",")
-            server_to_invitee.sendall(f"{ip_address} {port} {game_type}")
-    
-        # change status
+            server_to_invitee.sendall(f"{ip_address},{port},{game_type}".encode())
+
+        # update room and user status
         rooms[roomId]["status"] = "In Game"
         rooms[roomId]["participant"] = invitee
         online_users[inviter]["status"] = "In Game"
         online_users[invitee]["status"] = "In Game"
         
     except Exception as e:
-        print(f"Error during handling invite: {e}")
+        print(f"Error during handling invite4: {e}")

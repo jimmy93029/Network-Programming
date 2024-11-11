@@ -28,6 +28,7 @@ def show_online(online_users):
 
 # All public game rooms (including the creator, game type, and room status).
 def show_rooms(rooms):
+    print(f"rooms = {rooms}")
     if rooms:
         room_list = " | ".join([f"RoomId = {room_id}: Creator={info['creator']}, GameType={info['game_type']}, Status={info['status']}" 
                                for room_id, info in rooms.items() if info['room_type'] == "public"])

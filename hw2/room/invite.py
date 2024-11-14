@@ -51,6 +51,7 @@ def check_invitation(client_socket):
     else:
         ip_address, port, game_type = message.split(",")
         game_addr = (ip_address, int(port))
+        time.sleep(3)
         return "In Game mode2", game_addr, game_type
 
 

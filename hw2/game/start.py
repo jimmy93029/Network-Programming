@@ -28,13 +28,14 @@ def start_game1(client_socket, game_socket1, game_type):
 
     # Start the appropriate game session based on the selected game type
     if game_type == game_list[0]:
-        Tic_tac_toe(PlayerA, "A")
+        broke = Tic_tac_toe(PlayerA, "A")
     else:
-        dark_chess(PlayerA, "A")
+        broke = dark_chess(PlayerA, "A")
 
     # Notify the lobby server that the game has ended
-    client_socket.sendall(b"FINISH")
-    time.sleep(4)
+    if not broke:
+        client_socket.sendall(b"FINISH")
+        time.sleep(4)
     PlayerA.close()  # Close Player A’s socket after game completion
     game_socket1.close()  # Close the game server socket
 
@@ -83,7 +84,7 @@ def retry(client_socket, game_addr, game_type):
     if options[idx-1] == "reconnect":
         start_game2(client_socket, game_addr, game_type)  # Retry connecting
     else:
-        client_socket.sendall(b"START_GAME failed")  # Send failure message to lobby server
+        client_socket.sendall(b"START failed")  # Send failure message to lobby server
         print("Exited the room.")
 
 
@@ -117,9 +118,16 @@ def handle_game_ending(data, client, addr, rooms, login_addr, online_users):
     """
     playera = login_addr[addr]
     roomId = next((key for key, info in rooms.items() if info["creator"] == playera), None)
-    playerb = rooms[roomId]["participant"]
-    
-    # Update player statuses to "idle" and remove the room from the public list
+    playerb = rooms[roomId].get("participant")
+
+    # Update room and player statuses, handling if playerb is already disconnected
     rooms.pop(roomId, None)
     online_users[playera]["status"] = "idle"
-    online_users[playerb]["status"] = "idle"
+    
+    if playerb in online_users:
+        online_users[playerb]["status"] = "idle"
+    else:
+        print(f"{playerb} is already disconnected or not in the game.")
+
+    print(f"Room {roomId} closed. Both players set to idle.")
+

@@ -1,7 +1,7 @@
-
+from utils.tools import select_type 
 
 """ Client """
-def do_logout(client_socket):
+def do_logout(client_socket, retry=1):
     try:
         client_socket.sendall(b"LOGOUT")   
         response = client_socket.recv(1024).decode()
@@ -17,20 +17,19 @@ def do_logout(client_socket):
         print(f"Logout failed due to network issue: {e}")
 
         # The player can choose to retry logging out.
-        retry_logout(client_socket)
+        if not retry:
+            retry_logout(client_socket)
 
 
 def retry_logout(client_socket):
-    while True:
-        retry = input("Do you want to retry? (yes/no): ")
-        if retry.lower() == "yes":
-            do_logout(client_socket)
-            break
-        elif retry.lower() == "no":
-            print("Logout cancelled.")
-            break
-        else:
-            print("Invalid input. Please type 'yes' or 'no'.")
+    print("Do you want to retry? (yes/no):")
+    options = ['yes', 'no']
+    idx = select_type("retry optinos", options)
+
+    if options[idx-1] == "yes":
+        do_logout(client_socket, retry=1)
+    else:
+        print("Logout cancelled.")
 
 
 """ Server """

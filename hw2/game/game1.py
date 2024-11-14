@@ -52,6 +52,11 @@ def Tic_tac_toe(socket, player):
             # Opponent's turn
             print(f"Waiting for Player {'B' if player == 'A' else 'A'}'s move...")
             data = socket.recv(1024).decode()
+
+            if not data:
+                print("Connection lost or opponent has disconnected.")
+                return False
+
             row, col = map(int, data.split(","))
             board[row][col] = current_player
 
@@ -59,12 +64,12 @@ def Tic_tac_toe(socket, player):
         if check_winner(board, current_player):
             print_board(board)
             print(f"Player {current_player} wins!")
-            break
+            return True
 
         if is_draw(board):
             print_board(board)
             print("It's a draw!")
-            break
+            return True
 
         # Switch players
         current_player = "O" if current_player == "X" else "X"

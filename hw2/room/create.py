@@ -38,7 +38,8 @@ def handle_create_room(data, client, addr, rooms, login_addr, online_users):
             "creator": username,
             "game_type": game_type,
             "room_type": room_type,
-            "status": "Waiting"
+            "status": "Waiting",
+            "participant": None
         }
 
         client.sendall(b"Create rooom successfully")

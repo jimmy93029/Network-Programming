@@ -39,12 +39,12 @@ def dark_chess(socket, Me):
         winner = check_victory(board, hidden_board)
         if winner:
             print(f"Game Over. Player {winner} wins!")
-            break
+            return True
 
         # Check for draw condition
         if check_draw(move_count, last_capture_move):
             print("Game ends in a draw due to no captures in the last 50 moves.")
-            break
+            return True
 
         if current_player == Me:
             # Player's turn: choose between flipping or moving
@@ -90,8 +90,12 @@ def dark_chess(socket, Me):
             # Opponent's turn: wait for their action
             print(f"Waiting for Player {colored_piece(opponent)}'s action...")
             data = socket.recv(1024).decode()
-            action, *params = data.split()
 
+            if not data:
+                print("Connection lost or opponent has disconnected.")
+                return False
+            action, *params = data.split()
+            
             if action == "flip":
                 row, col = map(int, params)
                 flip_piece(board, hidden_board, row, col)
@@ -103,7 +107,7 @@ def dark_chess(socket, Me):
                 board[start_row][start_col] = " "
             elif action == "surrender":
                 print(f"Game Over. Player {Me} wins!")
-                break      
+                return True      
 
         move_count += 1  # Increment move count
         current_player = opponent if current_player == Me else Me

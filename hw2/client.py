@@ -14,15 +14,28 @@ def run():
     status = "unlogin"
 
     while True:
-        print(f"Your status = {status}")
-        status = predo(status)
-        option = question(status)
+        try:
+            print(f"Your status = {status}")
+            status = predo(status)
+            option = question(status)
+            status = do(option, status)
+            if status == "exit":
+                break
 
-        status = do(option, status)
-        if status == "exit":
+            print("------------------------------------------------------------------\n")
+
+        except KeyboardInterrupt:
+            print("Disconnected due to KeyboardInterrupt")
+            if client_socket:
+                do_logout(client_socket, retry=1)
+                client_socket.close()
+            break
+        except (ConnectionError, BrokenPipeError):
+            print("Server is down or connection lost. Exiting...")
+            if client_socket:
+                client_socket.close()
             break
 
-        print("------------------------------------------------------------------\n")
 
 
 def question(status):

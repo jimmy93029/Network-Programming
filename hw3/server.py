@@ -1,8 +1,10 @@
 import threading
+import os
 from utils.connection import bind_server, handle_disconnected
 from lobby import handle_register, handle_login1, handle_login2, handle_logout, handle_display
 from room import handle_create_room, handle_invite1, handle_invite2, handle_invite3, handle_invite4, handle_join1, handle_join2
 from game import handle_game_start, handle_game_ending
+
 
 user_db = {}        # key : user name, value = password
 online_users = {}   # key : user name, value(dict) = status, socket
@@ -10,8 +12,10 @@ rooms = {}          # key : room id, value(dict) = creator, game type, room type
 login_addr = {}     # key : addr, value = username
 mailbox = {}        # key : invitee, value = inviter
 
+
 def run():
     # Set up the server
+    init()
     server_socket = bind_server()
     assert server_socket is not None, "server_socket is not initialized"
     client_threads = []  # Track client threads and sockets
@@ -50,6 +54,7 @@ def handle_client(client, addr):
         handle_disconnected(client, addr)
     finally:
         client.close()  # Close client socket if loop ends or error occurs
+
 
 def handle(data, client, addr):
     # Process client requests
@@ -92,6 +97,29 @@ def handle(data, client, addr):
         handle_game_start(data, client, addr, rooms, login_addr, online_users)
 
     return exit
+
+
+def init():
+    folder = "folder"
+    server = os.path.join(folder, "server")
+    games_csv = os.path.join(server, "games.csv")
+
+    # Create folder if it doesn't exist
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+        print(f"Directory '{folder}' created.")
+
+    # Create folder/server if it doesn't exist
+    if not os.path.exists(server):
+        os.makedirs(server)
+        print(f"Directory '{server}' created.")
+
+    # Create folder/server/games.csv if it doesn't exist
+    if not os.path.exists(games_csv):
+        with open(games_csv, 'w') as f:
+            pass  # Create an empty file
+        print(f"File '{games_csv}' created.")
+
 
 if __name__ == "__main__":
     run()

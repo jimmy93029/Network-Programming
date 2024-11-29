@@ -88,6 +88,7 @@ def retry(client_socket, game_addr, game_type):
         print("Exited the room.")
 
 
+"""Server"""
 def handle_game_start(data, client, addr, rooms, login_addr, online_users):
     """
     Handles game start signaling between the lobby server and game server.

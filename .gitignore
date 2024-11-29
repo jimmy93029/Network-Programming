@@ -1,5 +1,5 @@
 # ignore _pycache_
 **/__pycache__/
 
-# ignore dir of server and each users 
+# ignore folders of server and each users 
 hw3/folders

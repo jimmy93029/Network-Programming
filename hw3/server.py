@@ -1,10 +1,10 @@
 import threading
 import os
 from utils.connection import bind_server, handle_disconnected
+from utils.variables import SERVER_FOLDER, GAME_META_FILE
 from lobby import handle_register, handle_login1, handle_login2, handle_logout, handle_display
 from room import handle_create_room, handle_invite1, handle_invite2, handle_invite3, handle_invite4, handle_join1, handle_join2
 from game import handle_game_start, handle_game_ending
-from test import handle_test
 
 
 user_db = {}        # key : user name, value = password
@@ -12,13 +12,13 @@ online_users = {}   # key : user name, value(dict) = status, socket
 rooms = {}          # key : room id, value(dict) = creator, game type, room type, *participant and room status
 login_addr = {}     # key : addr, value = username
 mailbox = {}        # key : invitee, value = inviter
+# games.csv         # row : GameName, Developer, Introduction 
 
 
 def run():
-    # Set up the server
+
     init()
     server_socket = bind_server()
-    assert server_socket is not None, "server_socket is not initialized"
     client_threads = []  # Track client threads and sockets
 
     try:
@@ -31,6 +31,7 @@ def run():
             client_thread = threading.Thread(target=handle_client, args=(client_socket, addr))
             client_threads.append((client_thread, client_socket))  # Store thread and socket
             client_thread.start()
+
     except KeyboardInterrupt:
         print("Shutting down server gracefully...")
 
@@ -41,6 +42,7 @@ def run():
     finally:
         server_socket.close()  # Close the main server socket
         print("Server closed.")
+
 
 def handle_client(client, addr):
     # Handle individual client connection
@@ -62,9 +64,6 @@ def handle(data, client, addr):
     exit = False
     if data != "":
         print(f"{addr} : {data}")
-
-    if data.startswith("Test"):
-        handle_test(data, client, addr)
 
     # Lobby commands
     if data.startswith("REGISTER"):
@@ -95,6 +94,8 @@ def handle(data, client, addr):
         handle_join2(data, client, addr, rooms, online_users, login_addr)
 
     # Game commands
+    elif data.startswith("LIST_GAMES"):
+        handle_list_games(data, client, addr)
     elif data.startswith("FINISH"):
         handle_game_ending(data, client, addr, rooms, login_addr, online_users)
     elif data.startswith("START"):  
@@ -104,25 +105,12 @@ def handle(data, client, addr):
 
 
 def init():
-    folder = "folder"
-    server = os.path.join(folder, "server")
-    games_csv = os.path.join(server, "games.csv")
+    os.makedirs(SERVER_FOLDER, exist_ok=True)
+    print(f"Directories '{SERVER_FOLDER}' ensured to exist.")
 
-    # Create folder if it doesn't exist
-    if not os.path.exists(folder):
-        os.makedirs(folder)
-        print(f"Directory '{folder}' created.")
-
-    # Create folder/server if it doesn't exist
-    if not os.path.exists(server):
-        os.makedirs(server)
-        print(f"Directory '{server}' created.")
-
-    # Create folder/server/games.csv if it doesn't exist
-    if not os.path.exists(games_csv):
-        with open(games_csv, 'w') as f:
+    if not os.path.exists(GAME_META_FILE):
+        with open(GAME_META_FILE, 'w') as f:
             pass  # Create an empty file
-        print(f"File '{games_csv}' created.")
 
 
 if __name__ == "__main__":

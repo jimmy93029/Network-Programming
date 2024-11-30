@@ -1,7 +1,7 @@
 from utils.connection import connect_to_server
 from utils.tools import select_type
-from .game1 import Tic_tac_toe
-from .game2 import dark_chess
+from .games import Tic_tac_toe
+from .games import dark_chess
 import time
 
 game_list = ["Tic_tac_toe", "dark_chess"]

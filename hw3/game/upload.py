@@ -1,20 +1,31 @@
-from utils.tools import select_type
+from utils.variables import SERVER_FOLDER, GAME_META_FILE
+import csv
+import time
+import os
 
-def upload_game(client_socket, game_name, description, file_path):
+
+def do_upload_game(client_socket, file_path):
     """
     Handles the upload process of a game to the server.
     """
     try:
         # Send upload request with metadata
-        metadata = f"UPLOAD|{game_name}|{description}"
+        game_name = input("Enter you file name (ignore .py) : ")
+        if not os.path.isfile(file_path):
+            print("file not found")
+            return
+        
+        description = input("Introduction of your game : ")
+        metadata = f"UPLOAD {game_name} {description}"
         client_socket.sendall(metadata.encode())
 
         # Wait for server response
         response = client_socket.recv(1024).decode()
-        print(response)
-        
+        file_path = os.path.join(os.getcwd(), game_name + ".py")
+
         if response.startswith("OK"):
             # Proceed to upload the file
+            time.sleep(2)
             with open(file_path, 'rb') as f:
                 while chunk := f.read(1024):
                     client_socket.sendall(chunk)
@@ -22,32 +33,10 @@ def upload_game(client_socket, game_name, description, file_path):
         else:
             print("Upload rejected:", response)
 
-    except FileNotFoundError:
-        print(f"Error: The file {file_path} does not exist.")
     except (ConnectionError, TimeoutError) as e:
         print(f"Upload failed due to network issue: {e}")
-        retry_upload(client_socket, game_name, description, file_path)
-
-def retry_upload(client_socket, game_name, description, file_path):
-    """
-    Prompts the user to retry the upload process.
-    """
-    print("Do you want to retry the upload? (yes/no):")
-    options = ['yes', 'no']
-    idx = select_type("Retry options", options)
-
-    if options[idx - 1] == "yes":
-        upload_game(client_socket, game_name, description, file_path)
-    else:
-        print("Upload cancelled.")
 
 
-import os
-import csv
-import shutil
-
-GAME_FOLDER = 'game_folder'
-GAME_META_FILE = 'games.csv'
 
 def handle_upload(data, client, addr, login_addr, online_users):
     """
@@ -55,7 +44,7 @@ def handle_upload(data, client, addr, login_addr, online_users):
     """
     try:
         # Parse metadata from client request
-        _, game_name, description = data.split('|')
+        _, game_name, description = data.split(' ')
         username = login_addr[addr]
 
         # Check if the user is the creator of the game
@@ -68,8 +57,7 @@ def handle_upload(data, client, addr, login_addr, online_users):
         client.sendall("OK: Ready to receive the game file.".encode())
         
         # Receive the game file and save it
-        server_path = os.path.join(GAME_FOLDER, f"{game_name}.py")
-        os.makedirs(GAME_FOLDER, exist_ok=True)  # Ensure folder exists
+        server_path = os.path.join(SERVER_FOLDER, f"{game_name}.py")
         with open(server_path, 'wb') as f:
             while chunk := client.recv(1024):
                 f.write(chunk)

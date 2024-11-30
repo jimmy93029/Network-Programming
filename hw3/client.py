@@ -2,6 +2,7 @@ from lobby import do_display, do_register, do_login, do_logout, do_display
 from room import do_create_room, do_invite, do_join_room, check_invitation, wait_for_join
 from game import start_game1, start_game2
 from utils.connection import connect_to_server
+from test import do_test
 
 
 client_socket = None    # client for user to connect to server
@@ -81,7 +82,7 @@ def do(option, status):
             status_ = "exit"
 
     elif status == "idle":
-        if int(option) not in [1, 2, 3, 4]:
+        if int(option) not in [1, 2, 3, 4, 5]:
             print("Please input the options in {1, 2, 3, 4}!")
         elif int(option) == 1:
             status_, game_type = do_create_room(client_socket)
@@ -91,8 +92,11 @@ def do(option, status):
             status_ = do_logout(client_socket)
             if status_ is not None:
                 client_socket.close()
-        else:
+        elif int(option) == 4:
             pass
+        else:
+            do_test(client_socket)
+            
 
     elif status.startswith("In Room"):
         if status.endswith("private"):

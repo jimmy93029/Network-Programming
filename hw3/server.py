@@ -4,6 +4,7 @@ from utils.connection import bind_server, handle_disconnected
 from lobby import handle_register, handle_login1, handle_login2, handle_logout, handle_display
 from room import handle_create_room, handle_invite1, handle_invite2, handle_invite3, handle_invite4, handle_join1, handle_join2
 from game import handle_game_start, handle_game_ending
+from test import handle_test
 
 
 user_db = {}        # key : user name, value = password
@@ -61,6 +62,9 @@ def handle(data, client, addr):
     exit = False
     if data != "":
         print(f"{addr} : {data}")
+
+    if data.startswith("Test"):
+        handle_test(data, client, addr)
 
     # Lobby commands
     if data.startswith("REGISTER"):

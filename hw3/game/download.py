@@ -1,3 +1,8 @@
+import csv
+from utils.variables import GAME_META_FILE
+import shutil
+import os
+
 
 def get_game_metadata(game_name):
     """從 CSV 中取得遊戲元數據"""

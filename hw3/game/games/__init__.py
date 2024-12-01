@@ -1,2 +1,2 @@
-from .game1 import Tic_tac_toe
-from .game2 import dark_chess
+from .tic_tac_toe import Tic_tac_toe
+from .dark_chess import dark_chess

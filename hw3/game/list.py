@@ -1,26 +1,32 @@
 import os
 import json
 import csv
-from utils.variables import GAME_META_FILE
+from utils.variables import GAME_META_FILE, LOCAL_GAME_META_FILE
+from utils.tools import format_table
 
 
-def do_list_my_game(client_socket):
+def do_listing_my_game():
     """
-    **(1-1). List all the games which you maintain yourself:**
-    Allows users to view their own published games and their details
-    (e.g., publisher, game description, etc.).
-
-    This function gathers the file names in the user's current directory
-    and queries the server for metadata about matching games.
+    List all the games which the user maintains.
     """
     # Get the current directory and list files
     user_dir = os.getcwd()
-    game_list = [file for _, _, files in os.walk(user_dir) for file in files]
+    game_list = [file for file in os.listdir(user_dir) if os.path.isfile(os.path.join(user_dir, file))]
 
-    # Prepare the message in "COMMAND DATA" format
-    command = "LIST_MY_GAMES"
-    data = json.dumps(game_list)  # Convert game list to JSON string for transmission
-    message = f"{command} {data}"  # Combine command and data into a single string
+    all_games = get_all_game_info(LOCAL_GAME_META_FILE)
+    game_info = [game for game in all_games if game["GameName"] in game_list]
+
+    # Display the game information
+    display_game_info(game_info, title="My Game Table")
+
+
+def do_listing_all_game(client_socket):
+    """
+    List all the games maintained in the lobby's external data source.
+    """
+    # Prepare the message
+    command = "LIST"
+    message = f"{command}"
 
     # Send the message to the server
     client_socket.sendall(message.encode())
@@ -29,44 +35,35 @@ def do_list_my_game(client_socket):
     response = client_socket.recv(4096).decode()
     game_info = json.loads(response)  # Decode the JSON response from the server
 
-    # Display the game information in a formatted table
-    display_game_info(game_info)
+    # Display the game information
+    display_game_info(game_info, title="All Game Table")
 
 
-def list_all_game(client_socket):
+
+def display_game_info(game_info, title):
     """
-    **(1-1). List all the games:**
-    This function sends a request to the server to retrieve all games
-    maintained in the lobby's external data source (e.g., CSV file).
+    Utility function to display game information in a formatted table using format_table.
+
+    Args:
+        game_info (list): A list of dictionaries containing game information.
+        title (str): Title for the table.
     """
-    # Prepare the message in "COMMAND DATA" format
-    command = "LIST_ALL_GAMES"
-    message = f"{command}"  # No additional data required
+    # Define table structure
+    header = ["Game Name", "Developer", "Introduction"]
+    column_widths = [20, 15, 30]  # Adjust column widths as needed
 
-    # Send the message to the server
-    client_socket.sendall(message.encode())
+    # If no game data, still show the table structure
+    if not game_info:
+        rows = []
+        table = format_table(header, rows, column_widths, title=title, count=0)
+    else:
+        rows = [[game["GameName"], game["Developer"], game["Introduction"]] for game in game_info]
+        table = format_table(header, rows, column_widths, title=title, count=len(game_info))
 
-    # Receive and process the server's response
-    response = client_socket.recv(4096).decode()
-    game_info = json.loads(response)  # Decode the JSON response from the server
-
-    # Display the game information in a formatted table
-    display_game_info(game_info)
-
-
-def display_game_info(game_info):
-    """
-    Utility function to display game information in a formatted table.
-    """
-    print("\n" + "=" * 60)
-    print(f"{'Game Name':<20} | {'Developer':<10} | {'Introduction'}")
-    print("=" * 60)
-    for game in game_info:
-        print(f"{game['GameName']:<20} | {game['Developer']:<10} | {game['Introduction']}")
-    print("=" * 60)
+    print(table)
 
 
-def get_all_game_info():
+def get_all_game_info(file):
     """
     **(1-3). Save game file with an external data source:**
     Retrieves all game information from the external data source (e.g., `games.csv`)
@@ -76,7 +73,7 @@ def get_all_game_info():
     """
     game_info_list = []
     try:
-        with open(GAME_META_FILE, 'r') as f:
+        with open(file, 'r') as f:
             reader = csv.DictReader(f)
             for row in reader:
                 game_info_list.append({
@@ -85,37 +82,17 @@ def get_all_game_info():
                     "Introduction": row["Introduction"]
                 })
     except FileNotFoundError:
-        print(f"Error: {GAME_META_FILE} not found.")
+        print(f"Error: {file} not found.")
     return game_info_list
 
 
-def handle_list_my_games(data, client, addr):
+def handle_list_all_games(data, client, addr):
     """
-    **(1-1). List all the games which you maintain yourself:**
-    Handles the LIST_MY_GAMES request from the client. It filters games
-    in the lobby database (`games.csv`) based on the file names in the user's current directory.
-    """
-    # Extract the command and data from the message
-    _, data = data.split(" ", 1)  # Split into command and data
-    game_list = json.loads(data)  # Parse the JSON data
-
-    # Query the CSV database for each game in the current directory
-    all_games = get_all_game_info()
-    game_info_list = [game for game in all_games if game["GameName"] in game_list]
-
-    # Send the game information back to the client
-    client.sendall(json.dumps(game_info_list).encode())
-
-
-def handle_list_all_games(client, addr):
-    """
-    **(1-1). List all the games:**
-    Handles the LIST_ALL_GAMES request from the client. It sends all
-    game information from the lobby's external data source (`games.csv`)
-    to the client without filtering.
+    Handles the LIST_ALL_GAMES request from the client.
     """
     # Retrieve all game information
-    all_games = get_all_game_info()
+    all_games = get_all_game_info(GAME_META_FILE)
 
     # Send the game information back to the client
     client.sendall(json.dumps(all_games).encode())
+

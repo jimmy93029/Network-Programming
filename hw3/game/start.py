@@ -1,5 +1,6 @@
 from utils.connection import connect_to_server
 from utils.tools import select_type
+from utils.variables import IDLE
 from .games import Tic_tac_toe
 from .games import dark_chess
 import time
@@ -20,7 +21,7 @@ def start_game1(client_socket, game_socket1, game_type):
     message = client_socket.recv(1024).decode()  # Wait for a message from the lobby server
     print(message)
     if message == "PlayerB exit":
-        return "idle"  # If Player B exits, return "idle" to reset state
+        return IDLE  # If Player B exits, return "idle" to reset state
 
     # Accept connection from Player B
     PlayerA, _ = game_socket1.accept()
@@ -39,7 +40,7 @@ def start_game1(client_socket, game_socket1, game_type):
     PlayerA.close()  # Close Player A’s socket after game completion
     game_socket1.close()  # Close the game server socket
 
-    return "idle"
+    return IDLE
 
 
 """ Client B """
@@ -59,7 +60,7 @@ def start_game2(client_socket, game_addr, game_type):
     except Exception as e:
         print(f"Error during game participation: {e}")
         retry(client_socket, game_addr, game_type)
-        return "idle"  # Return "idle" if an error occurs
+        return IDLE  # Return "idle" if an error occurs
 
     # Start the appropriate game session based on the selected game type
     if game_type == game_list[0]:
@@ -69,7 +70,7 @@ def start_game2(client_socket, game_addr, game_type):
 
     PlayerB.close()  # Close Player B’s socket after game completion
 
-    return "idle"
+    return IDLE
 
 
 def retry(client_socket, game_addr, game_type):

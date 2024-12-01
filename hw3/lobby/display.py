@@ -1,9 +1,20 @@
+from utils.tools import format_table
 
 
 """ Client """
-def do_display(client_socket):
+def do_showing_players(client_socket):
     try:
-        client_socket.sendall(b"DISPLAY")
+        client_socket.sendall(b"DISPLAY ONLINE")
+        response = client_socket.recv(1024).decode()
+        print(response)
+    
+    except (ConnectionError, TimeoutError) as e:
+        print(f"Display failed due to network issue: {e}")
+
+
+def do_showing_rooms(client_socket):
+    try:
+        client_socket.sendall(b"DISPLAY ROOM")
         response = client_socket.recv(1024).decode()
         print(response)
     
@@ -13,26 +24,42 @@ def do_display(client_socket):
     
 """ Server """
 def handle_display(data, client, addr, online_users, rooms):
-    message = show_online(online_users) + "\n" + show_rooms(rooms) + "\n"
+    _, option = data
+    if option == "ONLINE":
+        message = show_players(online_users)
+    else:
+        message = show_rooms(rooms) 
     client.sendall(message.encode())
 
 
-# The names and statuses of all currently online players (e.g., playing, idle).
-def show_online(online_users):
+def show_players(online_users):
+    """
+    Format and return the online players in a table format as a string.
+    """
     if online_users:
-        online_list = " | ".join([f"{username}: {info['status']}" for username, info in online_users.items()])
-        return f"Online players: {online_list}"
+        header = ["Address", "Player", "Status"]
+        rows = [[str(info["address"]), username, info["status"]]
+                for username, info in online_users.items()]
+        column_widths = [30, 10, 10]  # Adjust column widths to match the format in the image
+        table = format_table(header, rows, column_widths, title="Player List", count=len(online_users))
+        return table
     else:
         return "Currently, no players are online."
 
 
-# All public game rooms (including the creator, game type, and room status).
 def show_rooms(rooms):
-    print(f"rooms = {rooms}")
-    if rooms:
-        room_list = " | ".join([f"RoomId = {room_id}: Creator={info['creator']}, GameType={info['game_type']}, Status={info['status']}" 
-                               for room_id, info in rooms.items() if info['room_type'] == "public"])
-        return f"Available rooms: {room_list}"
+    """
+    Format and return the public rooms in a table format as a string.
+    """
+    public_rooms = [info for room_id, info in rooms.items() if info["room_type"] == "public"]
+
+    if public_rooms:
+        header = ["Name", "Host", "Status", "Room Type", "Game"]
+        rows = [[room_id, info["creator"], info["status"], info["room_type"], info["game_type"]]
+                for room_id, info in rooms.items() if info["room_type"] == "public"]
+        column_widths = [15, 10, 10, 12, 10]  # Adjust column widths as needed
+        table = format_table(header, rows, column_widths, title="Room Table", count=len(public_rooms))
+        return table
     else:
         return "No public rooms waiting for players."
 

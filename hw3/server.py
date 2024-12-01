@@ -4,7 +4,7 @@ from utils.connection import bind_server, handle_disconnected
 from utils.variables import SERVER_FOLDER, GAME_META_FILE
 from lobby import handle_register, handle_login1, handle_login2, handle_logout, handle_display
 from room import handle_create_room, handle_invite1, handle_invite2, handle_invite3, handle_invite4, handle_join1, handle_join2
-from game import handle_game_start, handle_game_ending
+from game import handle_game_start, handle_game_ending, handle_list_all_games
 
 
 user_db = {}        # key : user name, value = password
@@ -80,22 +80,26 @@ def handle(data, client, addr):
     # Room commands
     elif data.startswith("CREATE"):
         handle_create_room(data, client, addr, rooms, login_addr, online_users)
-    elif data.startswith("INVITE1"):
-        handle_invite1(data, client, addr, login_addr, online_users, mailbox)
-    elif data.startswith("INVITE2"):
-        handle_invite2(data, client, addr, login_addr, mailbox)
-    elif data.startswith("INVITE3"):
-        handle_invite3(data, client, addr, login_addr, online_users, mailbox)
-    elif data.startswith("INVITE4"):
-        handle_invite4(data, client, addr, login_addr, online_users, rooms, mailbox)
-    elif data.startswith("JOIN1"):
-        handle_join1(data, client, addr, rooms, online_users, login_addr)
-    elif data.startswith("JOIN2"):
-        handle_join2(data, client, addr, rooms, online_users, login_addr)
+
+    elif data.startswith("INVITE"):
+        if data.endswith("1"):
+            handle_invite1(data, client, addr, login_addr, online_users, mailbox)
+        elif data.endswith("2"):
+            handle_invite2(data, client, addr, login_addr, mailbox)
+        elif data.endswith("3"):
+            handle_invite3(data, client, addr, login_addr, online_users, mailbox)
+        elif data.startswith("4"):
+            handle_invite4(data, client, addr, login_addr, online_users, rooms, mailbox)
+
+    if data.startswith("JOIN"):
+        if data.startswith("1"):
+            handle_join1(data, client, addr, rooms, online_users, login_addr)
+        elif data.startswith("2"):
+            handle_join2(data, client, addr, rooms, online_users, login_addr)
 
     # Game commands
-    elif data.startswith("LIST_GAMES"):
-        handle_list_games(data, client, addr)
+    elif data.startswith("LIST"):
+        handle_list_all_games(data, client, addr)
     elif data.startswith("FINISH"):
         handle_game_ending(data, client, addr, rooms, login_addr, online_users)
     elif data.startswith("START"):  
@@ -107,6 +111,10 @@ def handle(data, client, addr):
 def init():
     os.makedirs(SERVER_FOLDER, exist_ok=True)
     print(f"Directories '{SERVER_FOLDER}' ensured to exist.")
+
+    if not os.path.exists(GAME_META_FILE):
+        with open(GAME_META_FILE, 'w') as f:
+            pass  # Create an empty file
 
     if not os.path.exists(GAME_META_FILE):
         with open(GAME_META_FILE, 'w') as f:

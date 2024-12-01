@@ -1,5 +1,6 @@
 from utils.connection import create_game_server
 from utils.tools import select_type
+from utils.variables import HOST, JOINER
 import time
 
 
@@ -18,7 +19,7 @@ def do_invite(client_socket):
         game_socket1, ip_address, port = create_game_server()
         client_socket.sendall(f"INVITE4 {ip_address},{port}".encode())
         time.sleep(3)
-        return "In Game mode1", game_socket1
+        return HOST, game_socket1
     except:
         client_socket.sendall(b"STARTUP_FAILED")
         time.sleep(3)
@@ -27,13 +28,14 @@ def do_invite(client_socket):
 
 """Client B"""
 def check_invitation(client_socket):
+    # Step 1 : check if I am invited
     client_socket.sendall(b"INVITE2")
     check = client_socket.recv(1024).decode()
     print(check)
     if check == "you are not invited":
         return None, None, None
 
-    # decline or not
+    # Step2 : decline or not
     answers = ["yes", "no"]
     idx = select_type("choices", answers)
 
@@ -42,9 +44,13 @@ def check_invitation(client_socket):
     else:
         client_socket.sendall("INVITE3 declined".encode())
         return None, None, None
+    
+    # Step3 : update game
+    client_socket.sendall(f"INVITE5 {} {}".encode())
 
-    # acquire game ip address
+    # Step 4 : acquire game ip address
     message = client_socket.recv(1024).decode()
+
     if message == "STARTUP_FAILED":
         print("Game server failed to start.")
         return None, None, None
@@ -52,7 +58,7 @@ def check_invitation(client_socket):
         ip_address, port, game_type = message.split(",")
         game_addr = (ip_address, int(port))
         time.sleep(3)
-        return "In Game mode2", game_addr, game_type
+        return JOINER, game_addr, game_type
 
 
 """Server"""

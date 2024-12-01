@@ -1,4 +1,5 @@
 from utils.connection import create_game_server
+from utils.variables import HOST, JOINER
 import time
 
 
@@ -24,7 +25,7 @@ def do_join_room(client_socket):
         ip, port, game_type = message.split()
         game_addr = (ip, int(port))
 
-    return "In Game mode2", game_addr, game_type
+    return JOINER, game_addr, game_type
 
 
 """Client A"""
@@ -41,7 +42,7 @@ def wait_for_join(client_socket):
     game_socket1, ip_address, port = create_game_server()
     if ip_address is not None:
         client_socket.sendall(f"JOIN2 {ip_address},{port} {joiner}".encode())
-        return "In Game mode1", game_socket1
+        return HOST, game_socket1
     else:
         client_socket.sendall(f"JOIN2 STARTUP_FAILED {joiner}".encode())
         print("STARTUP_FAILED: Cannot create game server")

@@ -1,5 +1,6 @@
 from game.start import game_list
 from utils.tools import select_type
+from utils.variables import IN_ROOM_
 
 room_list = ["private", "public"]
 
@@ -17,7 +18,7 @@ def do_create_room(client_socket, retry=0):
         print(response)
 
         if response == "Create rooom successfully":
-            return f"In Room {room_list[room_idx-1]}", game_list[game_idx-1]
+            return IN_ROOM_(room_list[room_idx-1]), game_list[game_idx-1]
         elif not retry:
             return do_create_room(client_socket, retry=1)
         

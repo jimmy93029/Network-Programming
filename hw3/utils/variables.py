@@ -15,14 +15,18 @@ UNLOGIN = "unlogin"
 IDLE = "idle"
 GAME_DEVOPLOP = "game develop"
 INVITE_MANAGE = "invite manage"
-IN_PRIVATE = "In Room private"
-IN_PUBLIC = "In Room public"
-HOST = "In Game host"
-JOINER = "In Game joiner"
+INVITE_SENDING = "invite sending"
+IN_ROOM_HOST = "In Room Host"
+IN_ROOM_PLAYER = "In Room player"
+IN_ROOM = "In Room"
+IN_GAME_HOST = "In Game host"
+IN_GAME_PLAYER = "In Game player"
+IN_GAME = "In Game"
 EXIT = "exit"
+
 
 # Helper function for room status
 def IN_ROOM_(room_type):
     return f"In Room {room_type}"
 
-
+Room_list = ["private", "public"]

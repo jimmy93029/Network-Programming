@@ -1,53 +1,70 @@
-from game.start import game_list
 from utils.tools import select_type
-from utils.variables import IN_ROOM_
+from utils.variables import IN_ROOM_HOST, IN_ROOM, Room_list
 
-room_list = ["private", "public"]
 
 """ Client """
-def do_create_room(client_socket, retry=0):
-
+def do_create_room(client_socket):
+    """
+    Sends a request to create a room to the server and handles the response.
+    """
     try:
-        game_idx = select_type(choice_name="game type", choice_list=game_list)
-        room_idx = select_type(choice_name="room type", choice_list=room_list)
-    
-        message = f"CREATE {game_list[game_idx-1]} {room_list[room_idx-1]}"
+        # Collect room details from the user
+        room_name = input("Enter Room Name: ")
+        room_idx = select_type(choice_name="Room type", choice_list=Room_list)
+        game_type = input("Enter the game you want to play: ")
+
+        # Send the room creation request to the server
+        message = f"CREATE {room_name} {game_type} {Room_list[room_idx - 1]}"
         client_socket.sendall(message.encode())
 
+        # Receive and handle the server's response
         response = client_socket.recv(1024).decode()
         print(response)
 
-        if response == "Create rooom successfully":
-            return IN_ROOM_(room_list[room_idx-1]), game_list[game_idx-1]
-        elif not retry:
-            return do_create_room(client_socket, retry=1)
-        
+        if response == "Create room successfully":
+            return IN_ROOM_HOST
+
     except (ConnectionError, TimeoutError) as e:
         print(f"Create Room failed due to network issue: {e}")
-        if not retry:
-            return do_create_room(client_socket, retry=1)
+
+    return None
 
 
 """ Server """
-def handle_create_room(data, client, addr, rooms, login_addr, online_users):
+def handle_create_room(data, client, addr, rooms, login_addr, online_users, game_list):
+    """
+    Handles the room creation request from the client.
+    """
     try:
-        _, game_type, room_type = data.split() 
-        room_id = len(rooms) + 1  
+        # Parse the client's room creation request
+        _, room_name, game_type, room_type = data.split()
 
+        # Check if the game type exists in the server's game list
+        if game_type not in game_list:
+            client.sendall(b"Error: Selected game type does not exist.")
+            return
+
+        # Check for duplicate room names
+        if room_name in rooms:
+            client.sendall(b"Error: Room name already exists.")
+            return
+
+        # Add the room to the server's room list
         username = login_addr[addr]
         room_info = {
             "creator": username,
             "game_type": game_type,
             "room_type": room_type,
             "status": "Waiting",
-            "participant": None
+            "participants": []
         }
 
-        client.sendall(b"Create rooom successfully")
-        rooms[f"{room_id}"] = room_info
-        online_users[username]["status"] = "In Room"
-        
+        rooms[room_name] = room_info
+        online_users[username]["status"] = IN_ROOM_HOST
+        client.sendall(b"Create room successfully")
+
     except Exception as e:
-        print(f"Server encountered an error during creating room: {e}")
-        client.sendall("Create room failed: Server error.".encode())
+        print(f"Server encountered an error during room creation: {e}")
+        client.sendall(b"Error: Server encountered an issue while creating the room.")
+
 

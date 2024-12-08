@@ -1,53 +1,86 @@
 import csv
-from utils.variables import GAME_META_FILE
-import shutil
-import os
+import time
+from utils.variables import LOCAL_GAME_META_FILE
 
 
-def get_game_metadata(game_name):
-    """從 CSV 中取得遊戲元數據"""
-    with open(GAME_META_FILE, 'r') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            if row['game_name'] == game_name:
-                return row
-    return None
+def get_local_game_version(game_name, metadata_file):
+    """
+    Retrieves the game version from the specified metadata file.
+    """
+    try:
+        with open(metadata_file, 'r') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if row['game_name'] == game_name:
+                    return row['version'], row['filepath']
+    except FileNotFoundError:
+        print(f"Metadata file not found: {metadata_file}")
+    return None, None
 
 
-def check_and_download_game(user_folder, game_name):
-    """檢查玩家資料夾中是否已有最新版本的遊戲，否則下載"""
-    game_metadata = get_game_metadata(game_name)
-    if not game_metadata:
-        raise FileNotFoundError(f"Game {game_name} not found on the server.")
+def check_and_update_game(client_socket, game_name):
+    """
+    Checks if the game version is up-to-date and downloads if necessary.
+    """
+    # Step 1: Get the local game version
+    local_version = get_local_game_version(game_name)
+    if local_version is None:
+        print(f"No local version found for {game_name}. Requesting latest version.")
+        local_version = "0"  # Assume no version
 
-    game_path = game_metadata['filepath']
-    user_game_path = os.path.join(user_folder, os.path.basename(game_path))
+    # Step 2: Send the local version to the server
+    client_socket.sendall(f"GAME_VERSION {game_name} {local_version}".encode())
 
-    # 如果遊戲版本一致，則不需要下載
-    if os.path.exists(user_game_path):
-        with open(user_game_path, 'r') as local_game, open(game_path, 'r') as server_game:
-            if local_game.read() == server_game.read():
-                print(f"{game_name} is up to date.")
-                return
-
-    # 將伺服器端的遊戲文件複製到玩家資料夾
-    shutil.copy(game_path, user_game_path)
-    print(f"Downloaded the latest version of {game_name} to {user_folder}.")
-
-
-def download_game(client_socket, game_name):
-    """從伺服器下載遊戲文件"""
-    client_socket.send(f"DOWNLOAD {game_name}".encode())
+    # Step 3: Receive the server's response
     response = client_socket.recv(1024).decode()
-    if response.startswith("ERROR"):
-        print(response)
-        return
+    if response == "Game version up-to-date":
+        print(f"{game_name} is up-to-date.")
+    elif response == "Game version outdated":
+        print(f"{game_name} is outdated. Downloading the latest version...")
+        receive_game_file(client_socket, f"game_folder/{game_name}.py")
+    else:
+        print("Unexpected response from server.")
 
-    # 接收遊戲文件內容
-    with open(f'game_folder/{game_name}.py', 'wb') as f:
-        while True:
-            data = client_socket.recv(1024)
-            if not data:
-                break
-            f.write(data)
-    print(f"Game {game_name} downloaded successfully.")
+
+def receive_game_file(client_socket, file_path):
+    """
+    Receives the updated game file from the server.
+    """
+    with open(file_path, 'wb') as f:
+        while chunk := client_socket.recv(1024):
+            f.write(chunk)
+    print(f"Game {file_path} updated successfully.")
+
+
+def check_and_sending_game(client, game_name):
+    """
+    Handles game version checks and sends updates if necessary.
+    """
+    # Step 2: Receive the client's game version
+    version_request = client.recv(1024).decode()
+    _, game_name, client_version = version_request.split()
+    server_version, server_filepath = get_local_game_version(game_name, LOCAL_GAME_META_FILE)
+
+    # Step 2: Compare versions and respond
+    if client_version == server_version:
+        client.sendall(b"Game version up-to-date")
+    else:
+        client.sendall(b"Game version outdated")
+
+        # Step 3: Wait 3 seconds and send the game file
+        time.sleep(3)
+        send_game_file(client, server_filepath)
+
+
+def send_game_file(client, file_path):
+    """
+    Sends the game file to the client.
+    """
+    try:
+        with open(file_path, 'rb') as f:
+            while chunk := f.read(1024):
+                client.sendall(chunk)
+    except FileNotFoundError:
+        print(f"Error: File not found {file_path}")
+
+

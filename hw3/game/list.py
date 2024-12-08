@@ -39,7 +39,6 @@ def do_listing_all_game(client_socket):
     display_game_info(game_info, title="All Game Table")
 
 
-
 def display_game_info(game_info, title):
     """
     Utility function to display game information in a formatted table using format_table.

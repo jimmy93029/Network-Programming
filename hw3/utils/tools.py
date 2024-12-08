@@ -1,3 +1,4 @@
+from utils.boardcast import check_mailbox
 
 
 def select_type(choice_name, choice_list, choice="0"): 
@@ -52,4 +53,7 @@ def format_table(header, rows, column_widths, title=None, count=None):
     table.append("-" * (sum(column_widths) + len(column_widths) - 1))
 
     return "\n".join(table)
+
+
+
 

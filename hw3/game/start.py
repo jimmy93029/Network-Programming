@@ -5,7 +5,6 @@ from .games import Tic_tac_toe
 from .games import dark_chess
 import time
 
-game_list = ["Tic_tac_toe", "dark_chess"]
 
 """ Client A """
 def start_game1(client_socket, game_socket1, game_type):

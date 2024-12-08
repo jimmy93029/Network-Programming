@@ -8,10 +8,12 @@ from game import handle_game_start, handle_game_ending, handle_list_all_games
 
 
 user_db = {}        # key : user name, value = password
-online_users = {}   # key : user name, value(dict) = status, socket
-rooms = {}          # key : room id, value(dict) = creator, game type, room type, *participant and room status
+online_users = {}   # key : user name, value(dict) = {status, socket}
+rooms = {}          # key : room id, value(dict) = {creator, game type, room type, *participant and status}
 login_addr = {}     # key : addr, value = username
-mailbox = {}        # key : invitee, value = inviter
+mailbox = {}        # key : invitee, value(list) = [list of messages]
+invitations = {}    # key : invitee, value(dict) = {key : invitor, value(dict) = {room, room status, message} 
+game_list = []      # entry: game_type
 # games.csv         # row : GameName, Developer, Introduction 
 
 
@@ -20,7 +22,7 @@ def run():
     init()
     server_socket = bind_server()
     client_threads = []  # Track client threads and sockets
-
+    
     try:
         while True:
             # Accept client connection
@@ -83,13 +85,13 @@ def handle(data, client, addr):
 
     elif data.startswith("INVITE"):
         if data.endswith("1"):
-            handle_invite1(data, client, addr, login_addr, online_users, mailbox)
+            handle_invite1(data, client, addr, login_addr, online_users, invitations )
         elif data.endswith("2"):
-            handle_invite2(data, client, addr, login_addr, mailbox)
+            handle_invite2(data, client, addr, login_addr, invitations)
         elif data.endswith("3"):
-            handle_invite3(data, client, addr, login_addr, online_users, mailbox)
+            handle_invite3(data, client, addr, login_addr, online_users, invitations)
         elif data.startswith("4"):
-            handle_invite4(data, client, addr, login_addr, online_users, rooms, mailbox)
+            handle_invite4(data, client, addr, login_addr, online_users, rooms, invitations)
 
     if data.startswith("JOIN"):
         if data.startswith("1"):

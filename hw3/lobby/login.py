@@ -74,7 +74,7 @@ def handle_login1(data, client, addr, user_db, login_addr):
         return True
 
 
-def handle_login2(data, client, addr, user_db, login_addr, online_users):
+def handle_login2(data, client, addr, user_db, login_addr, online_users, mailbox):
     try:
         _, password, retry = data.split()  # The game lobby server prompts the player to enter their password.
         username = login_addr.get(addr)
@@ -86,6 +86,7 @@ def handle_login2(data, client, addr, user_db, login_addr, online_users):
         # The game lobby server verifies the correctness of the password.
         if user_db.get(username) == password:
             online_users[username] = {"status": "idle", "socket": client}
+            mailbox[username] = []
             client.sendall("Login successful".encode())
             return False
         elif not int(retry):

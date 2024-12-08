@@ -1,4 +1,3 @@
-from utils.boardcast import check_mailbox
 
 
 def select_type(choice_name, choice_list, choice="0"): 
@@ -55,5 +54,40 @@ def format_table(header, rows, column_widths, title=None, count=None):
     return "\n".join(table)
 
 
+def get_game_metadata(game_name, metadata_file):
+    """
+    Retrieves game metadata from a specified metadata file.
+    """
+    try:
+        with open(metadata_file, 'r') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if row['game_name'] == game_name:
+                    return row
+    except FileNotFoundError:
+        print(f"Metadata file not found: {metadata_file}")
+    return None
+
+
+def update_game_metadata(game_metadata, metadata_file):
+    """
+    Updates the metadata file with the latest game metadata.
+    """
+    rows = []
+    try:
+        with open(metadata_file, 'r') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if row['game_name'] != game_metadata['game_name']:
+                    rows.append(row)
+    except FileNotFoundError:
+        print(f"Creating new metadata file: {metadata_file}")
+
+    # Add updated metadata
+    rows.append(game_metadata)
+    with open(metadata_file, 'w', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=['game_name', 'description', 'author', 'version', 'filepath'])
+        writer.writeheader()
+        writer.writerows(rows)
 
 

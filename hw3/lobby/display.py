@@ -97,11 +97,9 @@ def show_rooms(rooms):
     """
     Format and return the public rooms in a table format as a string.
     """
-    public_rooms = [info for room_id, info in rooms.items() if info["room_type"] == "public"]
-
     header = ["Name", "Host", "Status", "Room Type", "Game"]
     rows = [[room_id, info["creator"], info["status"], info["room_type"], info["game_type"]]
-            for room_id, info in rooms.items() if info["room_type"] == "public"]
+            for room_id, info in rooms.items()]
     column_widths = [15, 10, 10, 12, 10]
 
     # Format table (even if rows are empty)

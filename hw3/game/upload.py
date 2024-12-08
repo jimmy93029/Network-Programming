@@ -1,123 +1,95 @@
-from utils.variables import SERVER_FOLDER, GAME_META_FILE
-import csv
-import time
+from utils.variables import LOCAL_GAME_META_FILE
+from utils.tools import get_game_metadata, update_game_metadata
 import os
 
 
-def do_upload_game(client_socket, file_path):
+def do_upload_game(client_socket, game_name):
     """
-    Handles the upload process of a game to the server.
+    Handles the upload process of a game from the client to the server.
     """
     try:
-        # Send upload request with metadata
-        game_name = input("Enter you file name (ignore .py) : ")
+        # Check if the game file exists locally
+        file_path = f".{game_name}.py"
         if not os.path.isfile(file_path):
-            print("file not found")
+            print("File not found.")
             return
-        
-        description = input("Introduction of your game : ")
+
+        # Gather game metadata
+        description = input("Enter the description of your game: ")
         metadata = f"UPLOAD {game_name} {description}"
         client_socket.sendall(metadata.encode())
 
         # Wait for server response
         response = client_socket.recv(1024).decode()
-        file_path = os.path.join(os.getcwd(), game_name + ".py")
-
         if response.startswith("OK"):
             # Proceed to upload the file
-            time.sleep(2)
-            with open(file_path, 'rb') as f:
-                while chunk := f.read(1024):
-                    client_socket.sendall(chunk)
+            send_file(client_socket, file_path)
+
+            # Update local metadata
+            update(game_name, description, file_path)
             print(f"{game_name} uploaded successfully.")
         else:
-            print("Upload rejected:", response)
+            print(f"Upload rejected: {response}")
 
     except (ConnectionError, TimeoutError) as e:
         print(f"Upload failed due to network issue: {e}")
 
 
-
-def handle_upload(data, client, addr, login_addr, online_users):
+def handle_upload(data, client, addr, login_addr):
     """
-    Handles the upload process from the client.
+    Handles the upload process from the client to the server.
     """
     try:
         # Parse metadata from client request
         _, game_name, description = data.split(' ')
-        username = login_addr[addr]
+        uploader = login_addr[addr]
 
-        # Check if the user is the creator of the game
-        game_metadata = get_game_metadata(game_name)
-        if game_metadata and game_metadata['author'] != username:
-            client.sendall(f"ERROR: Only the creator {game_metadata['author']} can update this game.".encode())
-            return
-        
         # Send confirmation to proceed with file upload
-        client.sendall("OK: Ready to receive the game file.".encode())
-        
+        client.sendall(b"OK: Ready to receive the game file.")
+
         # Receive the game file and save it
-        server_path = os.path.join(SERVER_FOLDER, f"{game_name}.py")
-        with open(server_path, 'wb') as f:
-            while chunk := client.recv(1024):
-                f.write(chunk)
+        file_path = f".{game_name}.py"
+        receive_file(client, file_path)
 
-        # Update game metadata
-        if game_metadata:
-            new_version = int(game_metadata['version']) + 1
-            game_metadata.update({
-                'description': description,
-                'version': new_version,
-                'filepath': server_path
-            })
-        else:
-            game_metadata = {
-                'game_name': game_name,
-                'author': username,
-                'description': description,
-                'version': 1,
-                'filepath': server_path
-            }
-
-        update_game_metadata(game_metadata)
-        client.sendall(f"Upload successful: {game_name}, version {game_metadata['version']}".encode())
+        # Simplified logic to update game metadata
+        update(game_name, description, file_path)
 
     except Exception as e:
         print(f"Server encountered an error during upload: {e}")
-        client.sendall("ERROR: Upload failed due to server error.".encode())
+        client.sendall(b"ERROR: Upload failed due to server error.")
 
 
-def get_game_metadata(game_name):
+def update(game_name, description, file_path):
+    local_metadata = get_game_metadata(game_name, LOCAL_GAME_META_FILE)
+    version = int(local_metadata['version']) + 1 if local_metadata else 1
+    updated_metadata = {
+        'game_name': game_name,
+        'description': description,
+        'author': "You",  # Replace with actual username if available
+        'version': version,
+        'filepath': file_path
+    }
+    update_game_metadata(updated_metadata, LOCAL_GAME_META_FILE)
+
+
+def receive_file(client_socket, file_path):
     """
-    Retrieves game metadata from the CSV file.
+    Receives a file and writes it to the specified file path.
+    """
+    with open(file_path, 'wb') as f:
+        while chunk := client_socket.recv(1024):
+            f.write(chunk)
+    print(f"File received and saved to {file_path}.")
+
+
+def send_file(client_socket, file_path):
+    """
+    Sends a file from the specified file path.
     """
     try:
-        with open(GAME_META_FILE, 'r') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                if row['game_name'] == game_name:
-                    return row
+        with open(file_path, 'rb') as f:
+            while chunk := f.read(1024):
+                client_socket.sendall(chunk)
     except FileNotFoundError:
-        return None
-    return None
+        print(f"Error: File not found {file_path}")
 
-
-def update_game_metadata(game_metadata):
-    """
-    Updates the game metadata in the CSV file.
-    """
-    rows = []
-    try:
-        with open(GAME_META_FILE, 'r') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                if row['game_name'] != game_metadata['game_name']:
-                    rows.append(row)
-    except FileNotFoundError:
-        pass  # If the file doesn't exist, we'll create it.
-
-    rows.append(game_metadata)
-    with open(GAME_META_FILE, 'w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=['game_name', 'description', 'author', 'version', 'filepath'])
-        writer.writeheader()
-        writer.writerows(rows)

@@ -1,5 +1,5 @@
-from lobby import do_listing_online_players, do_listing_available_players, do_listing_rooms, do_register, do_login, do_logout
-from room import do_create_room, do_invite, do_join_room, check_invitation, wait_for_join
+from lobby import do_listing_online_players, do_listing_available_players, do_listing_rooms, do_listing_invitations, do_register, do_login, do_logout
+from room import do_create_room, do_invite, do_join_room, do_reply_invitation
 from game import start_game1, start_game2, do_listing_all_game, do_listing_my_game
 from utils.connection import connect_to_server
 from utils.tools import select_type
@@ -54,6 +54,8 @@ def question(status):
         prompt_list = ["List all the requests", "Accept request", "Back to lobby"]
     elif status == IN_ROOM_HOST:
         prompt_list = ["Invite Player", "Start Game", "Leave the room"]
+    elif status == INVITE_SENDING:
+        prompt_list = ["List available player", "Invite player", "back to room"]
     elif status == IN_ROOM_PLAYER:
         prompt_list = ["Leave the room"]
     elif status == IN_GAME_HOST:
@@ -100,9 +102,9 @@ def do(option, status):
 
     elif status == INVITE_MANAGE:
         if option == 1:
-            pass
+            do_listing_invitations(client_socket)
         elif option == 2:
-            pass
+            status_ = do_reply_invitation(client_socket)
         elif option == 3:
             status_ = IDLE
 
@@ -138,8 +140,7 @@ def do(option, status):
         if option == 1:
             do_listing_available_players(client_socket)
         elif option == 2:
-            # status_, game_socket1 = do_invite(client_socket)
-            pass
+            do_invite(client_socket)
         elif option == 3:
             status_ = IN_ROOM_HOST
 

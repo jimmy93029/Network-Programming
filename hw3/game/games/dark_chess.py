@@ -1,5 +1,4 @@
 from utils.tools import select_type
-from .rules import init_chinese_chess_board, print_chinese_chess_board, flip_piece, is_valid_move_dark_chess, get_board, colored_piece
 
 
 def check_victory(board, hidden_board):

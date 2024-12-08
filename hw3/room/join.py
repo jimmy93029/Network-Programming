@@ -26,7 +26,6 @@ def do_join_room(client_socket):
         return None
 
 
-
 """Server"""
 def handle_join(data, client, addr, rooms, online_users, login_addr):
     """

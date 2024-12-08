@@ -1,134 +1,152 @@
-from utils.connection import connect_to_server
-from utils.tools import select_type
-from utils.variables import IDLE
-from .games import Tic_tac_toe
-from .games import dark_chess
 import time
+from utils.connection import connect_to_server, create_game_server
+from utils.tools import select_type
+from utils.variables import IDLE, IN_ROOM_HOST, IN_ROOM_PLAYER
+from .games import Tic_tac_toe, dark_chess
 
 
-""" Client A """
-def start_game1(client_socket, game_socket1, game_type):
+""" Client A: Host """
+def start_game1(client_socket, game_type):
     """
-    The room creator starts the game server and manages game logic.
-    Preconditions:
-        - The room has been created successfully.
-        - The game type has been selected during room creation.
-    Trigger:
-        - Game starts automatically when two players are in the room.
+    Host starts the game server and manages game logic.
     """
-    print("Waiting for Player B to connect...")
-    message = client_socket.recv(1024).decode()  # Wait for a message from the lobby server
-    print(message)
-    if message == "PlayerB exit":
-        return IDLE  # If Player B exits, return "idle" to reset state
+    # Step 1: Host requests the server to check if the room is full
+    client_socket.sendall(b"START_REQUEST")
+    server_response = client_socket.recv(1024).decode()
 
-    # Accept connection from Player B
-    PlayerA, _ = game_socket1.accept()
-    print("Player B connected.")
+    if server_response == "NO":
+        print("Cannot start the game. Room is not full.")
+        return IN_ROOM_HOST
 
-    # Start the appropriate game session based on the selected game type
-    if game_type == game_list[0]:
-        broke = Tic_tac_toe(PlayerA, "A")
+    # Step 2: Create the game server
+    game_socket, ip_address, port = create_game_server()
+    if not game_socket:
+        print("Failed to start the game server.")
+        return IN_ROOM_HOST
+
+    # Step 3: Send game server details to the server
+    game_server_info = f"START_GAME {ip_address} {port}"
+    client_socket.sendall(game_server_info.encode())
+
+    # Step 4: Wait for confirmation from the server
+    participants_status = client_socket.recv(1024).decode()
+    if participants_status != "SUCCESS":
+        print("One or more participants failed to connect.")
+        game_socket.close()
+        return IN_ROOM_HOST
+
+    print("All participants connected successfully. Starting the game...")
+
+    # Step 5: Accept connection from the participant
+    participant, _ = game_socket.accept()
+    print("Participant connected.")
+
+    # Step 6: Start the selected game
+    if game_type == "Tic Tac Toe":
+        Tic_tac_toe(participant, "A")
     else:
-        broke = dark_chess(PlayerA, "A")
+        dark_chess(participant, "A")
 
-    # Notify the lobby server that the game has ended
-    if not broke:
-        client_socket.sendall(b"FINISH")
-        time.sleep(4)
-    PlayerA.close()  # Close Player A’s socket after game completion
-    game_socket1.close()  # Close the game server socket
+    # Step 7: Notify the server that the game has ended
+    client_socket.sendall(b"FINISH")
+    time.sleep(2)
+    game_socket.close()
 
     return IDLE
 
 
-""" Client B """
+""" Client B: Participant """
 def start_game2(client_socket, game_addr, game_type):
     """
-    The room joiner connects to the game server and participates in the game.
-    Preconditions:
-        - The room joiner has successfully joined the room.
-        - The room creator has started the game server.
+    Participant connects to the game server and joins the game.
     """
-    # Attempt to connect to the game server as Player B
     try:
-        print("Connecting to Game Server as Participant...")
-        PlayerB = connect_to_server(game_addr)  # Connect to game server
-        client_socket.sendall(b"START successfully")
-
+        # Step 1: Connect to the game server
+        print("Connecting to the game server...")
+        participant_socket = connect_to_server(game_addr)
+        client_socket.sendall(b"CONNECT SUCCESS")
     except Exception as e:
-        print(f"Error during game participation: {e}")
-        retry(client_socket, game_addr, game_type)
-        return IDLE  # Return "idle" if an error occurs
+        print(f"Error connecting to game server: {e}")
+        client_socket.sendall(b"CONNECT FAIL")
+        return IN_ROOM_PLAYER
 
-    # Start the appropriate game session based on the selected game type
-    if game_type == game_list[0]:
-        Tic_tac_toe(PlayerB, "B")
+    # Step 2: Start the selected game
+    if game_type == "Tic Tac Toe":
+        Tic_tac_toe(participant_socket, "B")
     else:
-        dark_chess(PlayerB, "B")
+        dark_chess(participant_socket, "B")
 
-    PlayerB.close()  # Close Player B’s socket after game completion
-
+    participant_socket.close()
     return IDLE
 
 
-def retry(client_socket, game_addr, game_type):
+""" Server """
+def handle_game_start_request(data, client, addr, rooms, login_addr, online_users):
     """
-    Offers the room joiner the option to reconnect or exit the room.
-    Extension:
-        - If the room joiner is unable to connect to the game server, they can retry or exit.
+    Handles a game start request from the host.
     """
-    options = ["reconnect", "exit"]
-    idx = select_type("options", options)
+    # Step 1: Check if the room is full
+    host = login_addr[addr]
+    room_name = next((key for key, info in rooms.items() if info["creator"] == host), None)
+    room = rooms[room_name]
 
-    if options[idx-1] == "reconnect":
-        start_game2(client_socket, game_addr, game_type)  # Retry connecting
+    if not room or len(room.get("participants", [])) < 1:  # 1 participant is required
+        client.sendall(b"NO")
+        return
+
+    # Step 2: Notify the host that the room is full
+    client.sendall(b"YES")
+
+    # Step 3: Notify all participants to prepare for the game
+    participants = room["participants"]
+    for participant in participants:
+        participant_socket = online_users[participant]["socket"]
+        participant_socket.sendall(b"GAME_START")
+
+
+def handle_game_server_details(data, client, addr, rooms, online_users):
+    """
+    Receives game server details from the host and sends them to the participant.
+    """
+    # Step 1: Parse game server details
+    _, room_id, ip_address, port = data.split()
+    room = rooms.get(room_id)
+
+    if not room:
+        return
+
+    # Step 2: Send game server details to the participant
+    participant = room["participants"][0]  # Assuming one participant
+    participant_socket = online_users[participant]["socket"]
+    game_info = f"GAME_INFO {ip_address} {port}"
+    participant_socket.sendall(game_info.encode())
+
+    # Step 3: Wait for the participant's connection status
+    response = participant_socket.recv(1024).decode()
+    if response == "CONNECT SUCCESS":
+        # Step 4: Notify the host and update statuses
+        client.sendall(b"SUCCESS")
+        online_users[room["creator"]]["status"] = "In Game"
+        online_users[participant]["status"] = "In Game"
+        room["status"] = "In Game"
     else:
-        client_socket.sendall(b"START failed")  # Send failure message to lobby server
-        print("Exited the room.")
+        client.sendall(b"FAIL")
 
 
-"""Server"""
-def handle_game_start(data, client, addr, rooms, login_addr, online_users):
+def handle_game_ending(data, client, addr, rooms, online_users):
     """
-    Handles game start signaling between the lobby server and game server.
-    Main Success Scenario:
-        - The room joiner connects to the room creator's game server via the lobby server.
-        - Both players start the game.
+    Handles the end of the game, updating room and player statuses.
     """
-    _, message = data.split()
+    # Step 1: Identify the room and players
+    _, room_id = data.split()
+    room = rooms.pop(room_id, None)
 
-    playerb = login_addr[addr]
-    roomId = next((key for key, info in rooms.items() if info["participant"] == playerb), None)
-    creator = rooms[roomId]["creator"]
-    playera_socket = online_users[creator]["socket"]
+    if room:
+        players = [room["creator"]] + room.get("participants", [])
+        # Step 2: Update all players' statuses to idle
+        for player in players:
+            if player in online_users:
+                online_users[player]["status"] = "idle"
 
-    # Notify room creator if Player B connected or exited
-    if message == "successfully":
-        playera_socket.send(b"PlayerB connect successfully")
-    else:
-        playera_socket.send(b"PlayerB exit")
-
-
-def handle_game_ending(data, client, addr, rooms, login_addr, online_users):
-    """
-    Handles game ending and updates room and player statuses.
-    Postconditions:
-        - The game room is dissolved.
-        - Both players' statuses are updated to "idle" in the lobby server.
-    """
-    playera = login_addr[addr]
-    roomId = next((key for key, info in rooms.items() if info["creator"] == playera), None)
-    playerb = rooms[roomId].get("participant")
-
-    # Update room and player statuses, handling if playerb is already disconnected
-    rooms.pop(roomId, None)
-    online_users[playera]["status"] = "idle"
-    
-    if playerb in online_users:
-        online_users[playerb]["status"] = "idle"
-    else:
-        print(f"{playerb} is already disconnected or not in the game.")
-
-    print(f"Room {roomId} closed. Both players set to idle.")
+    print(f"Room {room_id} closed and all players set to idle.")
 

@@ -23,7 +23,7 @@ def check_and_update_game(client_socket, game_name):
     Checks if the game version is up-to-date and downloads if necessary.
     """
     # Step 1: Get the local game version
-    local_version = get_local_game_version(game_name)
+    local_version = get_local_game_version(game_name, LOCAL_GAME_META_FILE)
     if local_version is None:
         print(f"No local version found for {game_name}. Requesting latest version.")
         local_version = "0"  # Assume no version

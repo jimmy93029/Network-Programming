@@ -1,4 +1,4 @@
-from utils.variables import IN_ROOM_PLAYER, IN_ROOM
+from utils.variables import IN_ROOM_PLAYER, IN_ROOM, NAME, STATUS, MESSAGE, PLAYERS, GAME, HOST, IDLE
 from game.download import check_and_update_game, check_and_sending_game
 
 
@@ -63,15 +63,13 @@ def handle_send_invite(server_to_inviter, invitor, invitee, message, online_user
         if invitee not in online_users:
             server_to_inviter.sendall(b"Invite failed: Invitee is not connected")
             return
-        elif online_users[invitee]["status"] != "idle":
+        elif online_users[invitee][STATUS] != IDLE:
             server_to_inviter.sendall(b"Invite failed: User is not idle")
             return
 
-        room_name = next((key for key, info in rooms.items() if info["creator"] == invitor), None)
+        room_name = next((key for key, info in rooms.items() if info[HOST] == invitor), None)
         # record invitation
-        if invitee not in invitations:
-            invitations[invitee] = {}
-        invitations[invitee][invitor] = {"room":room_name, "room status":rooms[room_name]["status"], "message": message}
+        invitations[invitee][invitor] = {NAME:room_name, STATUS: rooms[room_name][STATUS], MESSAGE: message}
 
     except Exception as e:
         print(f"Error during handling invite1: {e}")
@@ -90,15 +88,15 @@ def handle_reply_invite(server_to_invitee, invitor, invitee, online_users, invit
         return
 
     # Step 1: Send success response with game type
-    room_name = invitations[invitee][invitor]["room"]
-    game_type = rooms[room_name]["game_type"]
+    room_name = invitations[invitee][invitor][NAME]
+    game_type = rooms[room_name][GAME]
     server_to_invitee.sendall(f"Success {game_type}".encode())
 
     # Step 2: Check and send game updates if necessary
     check_and_sending_game(server_to_invitee, game_type)
 
     # Final Step: Add the invitee to the room and update their status
-    rooms[room_name]["participants"].append(invitee)
-    online_users[invitee]["status"] = IN_ROOM
+    rooms[room_name][PLAYERS].append(invitee)
+    online_users[invitee][STATUS] = IN_ROOM
 
 

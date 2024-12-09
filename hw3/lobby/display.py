@@ -1,4 +1,5 @@
 from utils.tools import format_table
+from utils.variables import NAME, HOST, STATUS, ROOM_TYPE, GAME, MESSAGE, IDLE, ADDRESS
 
 
 """ Client """
@@ -76,7 +77,7 @@ def show_players(online_users, available=False):
     """
     if available:
         # Filter idle players
-        filtered_users = {username: info for username, info in online_users.items() if info["status"] == "idle"}
+        filtered_users = {username: info for username, info in online_users.items() if info[STATUS] == IDLE}
         title = "Available Players"
     else:
         # Show all players
@@ -85,7 +86,7 @@ def show_players(online_users, available=False):
 
     # Define table structure (headers remain the same)
     header = ["Address", "Player", "Status"]
-    rows = [[str(info["address"]), username, info["status"]] for username, info in filtered_users.items()]
+    rows = [[str(info[ADDRESS]), username, info[STATUS]] for username, info in filtered_users.items()]
     column_widths = [30, 10, 10]
 
     # Format table (even if rows are empty)
@@ -97,8 +98,8 @@ def show_rooms(rooms):
     """
     Format and return the public rooms in a table format as a string.
     """
-    header = ["Name", "Host", "Status", "Room Type", "Game"]
-    rows = [[room_id, info["creator"], info["status"], info["room_type"], info["game_type"]]
+    header = [NAME, HOST, STATUS, ROOM_TYPE, GAME]
+    rows = [[room_id, info[HOST], info[STATUS], info[ROOM_TYPE], info[GAME]]
             for room_id, info in rooms.items()]
     column_widths = [15, 10, 10, 12, 10]
 
@@ -111,9 +112,9 @@ def show_invitations(invitations, invitee):
     """
     Format and return all invitations received by the invitee in a table format.
     """
-    header = ["Invitor", "Room", "Room Status", "Message"]
+    header = ["invitor", "room", "room status", "message"]
     rows = [
-        [invitor, info["room"], info["room status"], info["message"]]
+        [invitor, info[NAME], info[STATUS], info[MESSAGE]]
         for invitor, info in invitations.get(invitee, {}).items()
     ]
     column_widths = [10, 15, 20, 30]

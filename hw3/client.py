@@ -1,23 +1,21 @@
 from lobby import do_listing_online_players, do_listing_available_players, do_listing_rooms, do_listing_invitations, do_register, do_login, do_logout
-from room import do_create_room, do_invite, do_join_room, do_reply_invitation
-from game import start_game1, start_game2, do_listing_all_game, do_listing_my_game
+from room import do_create_room, do_invite, do_join_room, do_reply_invitation, do_host_leave, do_player_waiting
+from game import do_starting_game1, do_starting_game2, do_upload_game, do_listing_all_game, do_listing_my_game
 from utils.connection import connect_to_server
 from utils.tools import select_type
-from utils.variables import UNLOGIN, IDLE, EXIT, GAME_DEVOPLOP, INVITE_MANAGE, INVITE_SENDING, IN_ROOM_HOST, IN_ROOM_PLAYER, IN_GAME_PLAYER, IN_GAME_HOST
+from utils.variables import UNLOGIN, IDLE, EXIT, GAME_DEVOPLOP, INVITE_MANAGE, INVITE_SENDING, IN_ROOM_HOST, IN_ROOM_PLAYER, IN_GAME_PLAYER, client_init
 from utils.boardcast import listen_for_broadcasts, get_user_input
 import threading
 
 
 client_socket = None    # client for user to connect to server
-game_socket1 = None     # game socket controlled by room creator
-game_type = None
-game_addr = None        # game addr for connecting to game server
 option = None           # 
 
 
 def run():
     global client_socket
     status = UNLOGIN
+    client_init()
 
     while True:
         try:
@@ -57,11 +55,9 @@ def question(status):
     elif status == INVITE_SENDING:
         prompt_list = ["List available player", "Invite player", "back to room"]
     elif status == IN_ROOM_PLAYER:
-        prompt_list = ["Leave the room"]
-    elif status == IN_GAME_HOST:
-        pass
+        return
     elif status == IN_GAME_PLAYER:
-        pass
+        return
     else:
         return
     
@@ -96,7 +92,7 @@ def do(option, status):
         if option == 1:
             do_listing_my_game()
         elif option == 2:
-            pass
+            do_upload_game(client_socket)
         elif option == 3:
             status_ = IDLE
 
@@ -131,10 +127,9 @@ def do(option, status):
         if option == 1:
             status_ = INVITE_SENDING
         elif option == 2:
-            # status_ = start_game1(client_socket, game_socket1, game_type)
-            pass
+            status_ = do_starting_game1(client_socket)
         elif option == 3:
-            pass
+            do_host_leave(client_socket)
     
     elif status == INVITE_SENDING:
         if option == 1:
@@ -144,12 +139,11 @@ def do(option, status):
         elif option == 3:
             status_ = IN_ROOM_HOST
 
+    elif status == IN_ROOM_PLAYER:
+        do_player_waiting(client_socket)
 
-    # elif status.startswith("In Game"):
-    #     if status.endswith("host"):
-    #         status_ = start_game1(client_socket, game_socket1, game_type)
-    #     elif status.endswith("joiner"):
-    #         status_ = start_game2(client_socket, game_addr, game_type)
+    elif status == IN_GAME_PLAYER:
+        do_starting_game2(client_socket)
 
     return status if status_ is None else status_
 

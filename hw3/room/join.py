@@ -1,5 +1,5 @@
 from utils.connection import create_game_server
-from utils.variables import IN_ROOM_PLAYER, IN_ROOM
+from utils.variables import IN_ROOM_PLAYER, STATUS, PLAYERS, ROOM_TYPE, IN_GAME
 
 
 """Client B"""
@@ -42,20 +42,20 @@ def handle_join(data, client, addr, rooms, online_users, login_addr):
         room = rooms[room_name]
 
         # Check room status and type
-        if room["status"] == "In Game":
+        if room[STATUS] == "In Game":
             client.sendall(b"Room is currently in game")
             return
-        elif room["room_type"] == "private":
+        elif room[ROOM_TYPE] == "private":
             client.sendall(b"Cannot join a private room without an invitation")
             return
-        elif len(room["participants"]) >= 1:  # Assuming max joiners is 1 (host + 1 player)
+        elif len(room[PLAYERS]) >= 1:  # Assuming max joiners is 1 (host + 1 player)
             client.sendall(b"Room is full")
             return
 
         # Add joiner to the room
         player = login_addr[addr]
-        room["participants"].append(player)
-        online_users[player]["status"] = IN_ROOM_PLAYER
+        room[PLAYERS].append(player)
+        online_users[player][STATUS] = IN_ROOM_PLAYER
         client.sendall(b"Join request accepted")
 
     except Exception as e:

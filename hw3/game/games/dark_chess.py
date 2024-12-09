@@ -1,4 +1,6 @@
 from utils.tools import select_type
+import sys 
+import socket
 
 
 def check_victory(board, hidden_board):
@@ -112,6 +114,21 @@ def dark_chess(socket, Me):
         current_player = opponent if current_player == Me else Me
 
 
+def main():
+    role = sys.argv[1]
+    socket_fd = int(sys.argv[2])  # File descriptor for the socket
+
+    # Wrap the file descriptor as a socket
+    game_socket = socket.fromfd(socket_fd, socket.AF_INET, socket.SOCK_STREAM)
+    dark_chess(game_socket, role)
+
+
+if __name__ == "__main__":
+    main()
+
+
+
+# --------------------------------------- rules ------------------------------------------------
 
 import random
 

@@ -1,4 +1,7 @@
 from utils.tools import select_type
+import sys
+import socket
+
 
 def print_board(board):
     """Print the current state of the board."""
@@ -74,3 +77,16 @@ def Tic_tac_toe(socket, player):
         # Switch players
         current_player = "O" if current_player == "X" else "X"
 
+
+def main():
+    role = sys.argv[1]
+    socket_fd = int(sys.argv[2])  # File descriptor for the socket
+
+    # Wrap the file descriptor as a socket
+    game_socket = socket.fromfd(socket_fd, socket.AF_INET, socket.SOCK_STREAM)
+
+    Tic_tac_toe(game_socket, role)
+
+
+if __name__ == "__main__":
+    main()

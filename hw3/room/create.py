@@ -1,5 +1,5 @@
 from utils.tools import select_type
-from utils.variables import IN_ROOM_HOST, IN_ROOM, Room_list
+from utils.variables import IN_ROOM_HOST, Room_list, NAME, HOST, STATUS, ROOM_TYPE, GAME, PLAYERS, WAITING
 
 
 """ Client """
@@ -52,15 +52,15 @@ def handle_create_room(data, client, addr, rooms, login_addr, online_users, game
         # Add the room to the server's room list
         username = login_addr[addr]
         room_info = {
-            "creator": username,
-            "game_type": game_type,
-            "room_type": room_type,
-            "status": "Waiting",
-            "participants": []
+            HOST: username,
+            GAME: game_type,
+            ROOM_TYPE: room_type,
+            STATUS: WAITING,
+            PLAYERS: []
         }
 
         rooms[room_name] = room_info
-        online_users[username]["status"] = IN_ROOM_HOST
+        online_users[username][STATUS] = IN_ROOM_HOST
         client.sendall(b"Create room successfully")
 
     except Exception as e:

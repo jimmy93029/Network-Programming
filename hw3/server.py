@@ -1,13 +1,12 @@
 import threading
-import os
 from utils.connection import bind_server, handle_disconnected
-from utils.variables import SERVER_FOLDER, GAME_META_FILE
+from utils.variables import server_init
+from utils.boardcast import handle_listen_for_broadcast
 from lobby import handle_register, handle_login1, handle_login2, handle_logout, handle_display
-from room import handle_create_room, handle_invite1, handle_invite2, handle_invite3, handle_invite4, handle_join1, handle_join2
-from game import handle_game_start, handle_game_ending, handle_list_all_games
+from room import handle_create_room, handle_invite, handle_join, handle_leave
+from game import handle_game_issue, handle_list_all_games, handle_upload
 
 
-user_db = {}        # key : user name, value = password
 online_users = {}   # key : user name, value(dict) = {status, socket}
 rooms = {}          # key : room id, value(dict) = {creator, game type, room type, *participant and status}
 login_addr = {}     # key : addr, value = username
@@ -15,11 +14,11 @@ mailbox = {}        # key : invitee, value(list) = [list of messages]
 invitations = {}    # key : invitee, value(dict) = {key : invitor, value(dict) = {room, room status, message} 
 game_list = []      # entry: game_type
 # games.csv         # row : GameName, Developer, Introduction 
+# user_datas.csv    # row : username, password      
 
 
 def run():
-
-    init()
+    server_init()
     server_socket = bind_server()
     client_threads = []  # Track client threads and sockets
     
@@ -69,11 +68,11 @@ def handle(data, client, addr):
 
     # Lobby commands
     if data.startswith("REGISTER"):
-        handle_register(data, client, addr, user_db)
+        handle_register(data, client, addr)
     elif data.startswith("LOGIN1"):
-        exit = handle_login1(data, client, addr, user_db, login_addr)
+        exit = handle_login1(data, client, addr, login_addr)
     elif data.startswith("LOGIN2"):
-        exit = handle_login2(data, client, addr, user_db, login_addr, online_users)
+        exit = handle_login2(data, client, addr, login_addr, online_users, mailbox)
     elif data.startswith("LOGOUT"):
         exit = handle_logout(data, client, addr, login_addr, online_users)
     elif data.startswith("DISPLAY"):
@@ -82,45 +81,26 @@ def handle(data, client, addr):
     # Room commands
     elif data.startswith("CREATE"):
         handle_create_room(data, client, addr, rooms, login_addr, online_users)
-
     elif data.startswith("INVITE"):
-        if data.endswith("1"):
-            handle_invite1(data, client, addr, login_addr, online_users, invitations )
-        elif data.endswith("2"):
-            handle_invite2(data, client, addr, login_addr, invitations)
-        elif data.endswith("3"):
-            handle_invite3(data, client, addr, login_addr, online_users, invitations)
-        elif data.startswith("4"):
-            handle_invite4(data, client, addr, login_addr, online_users, rooms, invitations)
-
-    if data.startswith("JOIN"):
-        if data.startswith("1"):
-            handle_join1(data, client, addr, rooms, online_users, login_addr)
-        elif data.startswith("2"):
-            handle_join2(data, client, addr, rooms, online_users, login_addr)
+        handle_invite(data, client, addr, login_addr, online_users, invitations, rooms)
+    elif data.startswith("JOIN"):
+        handle_join(data, client, addr, rooms, online_users, login_addr)
+    elif data.startswith("LEAVE"):    
+        handle_leave(data, client, addr, rooms, login_addr, online_users)
 
     # Game commands
+    if data.startswith("GAME"):
+        handle_game_issue(data, client, addr, rooms, login_addr, online_users)
+    elif data.startswith("UPLOAD"):
+        handle_upload(data, client, addr, login_addr)
     elif data.startswith("LIST"):
         handle_list_all_games(data, client, addr)
-    elif data.startswith("FINISH"):
-        handle_game_ending(data, client, addr, rooms, login_addr, online_users)
-    elif data.startswith("START"):  
-        handle_game_start(data, client, addr, rooms, login_addr, online_users)
+
+    # Uitls commands
+    if data.startswith("BROADCAST"):
+        handle_listen_for_broadcast(data, client, addr, mailbox, login_addr)
 
     return exit
-
-
-def init():
-    os.makedirs(SERVER_FOLDER, exist_ok=True)
-    print(f"Directories '{SERVER_FOLDER}' ensured to exist.")
-
-    if not os.path.exists(GAME_META_FILE):
-        with open(GAME_META_FILE, 'w') as f:
-            pass  # Create an empty file
-
-    if not os.path.exists(GAME_META_FILE):
-        with open(GAME_META_FILE, 'w') as f:
-            pass  # Create an empty file
 
 
 if __name__ == "__main__":

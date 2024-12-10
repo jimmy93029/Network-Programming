@@ -5,9 +5,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(os.path.join(__file__, "..", "..")))
 FOLDERS = os.path.join(BASE_DIR, "folders")
 SERVER_FOLDER = os.path.join(FOLDERS, "server")
 GAME_META_FILE = os.path.join(SERVER_FOLDER, "games.csv")
-LOCAL_GAME_META_FILE = os.path.join(BASE_DIR, "games.csv")
+LOCAL_GAME_META_FILE = os.path.join(os.getcwd(), "games.csv")
 USER_DATA = os.path.join(SERVER_FOLDER, "user_datas.csv")
-
 
 # Status 
 UNLOGIN = "unlogin"
@@ -29,7 +28,7 @@ Room_list = [PRIVATE , PUBLIC]
 def IN_ROOM_(room_type):
     return f"In Room {room_type}"
 
-# Room 
+# Data structures : Room 
 NAME = "name"
 HOST = "host"
 GAME = "game"
@@ -37,21 +36,28 @@ STATUS = "status"
 ROOM_TYPE = "room type"
 PLAYERS = "players"
 WAITING = "waiting"
+MAX_PLAYERS = 1
 
-# invitations 
+# Data structures : invitations 
 MESSAGE = "message"
 
-# online users
+# Data structures : online users
 ADDRESS = "address"
 SOCKET = "socket"
+
+# File structures : games.csv
+GAME_NAME = "game_name"
+DEVEPLOPER = "developer"
+INTRO = "introduction"
+VERSION = "version"
 
 # Data init
 def server_init():
     os.makedirs(SERVER_FOLDER, exist_ok=True)
     print(f"Directories '{SERVER_FOLDER}' ensured to exist.")
 
-    if not os.path.exists(GAME_META_FILE):
-        with open(GAME_META_FILE, 'w') as f:
+    if not os.path.exists(LOCAL_GAME_META_FILE):
+        with open(LOCAL_GAME_META_FILE, 'w') as f:
             pass  # Create an empty file
 
     if not os.path.exists(USER_DATA):
@@ -62,6 +68,8 @@ def client_init():
     if not os.path.exists(LOCAL_GAME_META_FILE):
         with open(LOCAL_GAME_META_FILE, 'w') as f:
             pass  # Create an empty file
+        print(f"Local game metadata file created at: {LOCAL_GAME_META_FILE}")
+
 
 def user_init(username, online_users, client, mailbox, invitations, addr):
     online_users[username] = {STATUS: IDLE, SOCKET: client, ADDRESS:addr}

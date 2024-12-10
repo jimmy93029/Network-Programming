@@ -1,8 +1,7 @@
 import os
 import json
-import csv
-from utils.variables import GAME_META_FILE, LOCAL_GAME_META_FILE
-from utils.tools import format_table
+from utils.variables import LOCAL_GAME_META_FILE, GAME_NAME, DEVEPLOPER, INTRO
+from utils.tools import format_table, get_csv_data
 
 
 def do_listing_my_game():
@@ -13,7 +12,7 @@ def do_listing_my_game():
     user_dir = os.getcwd()
     game_list = [file for file in os.listdir(user_dir) if os.path.isfile(os.path.join(user_dir, file))]
 
-    all_games = get_all_game_info(LOCAL_GAME_META_FILE)
+    all_games = get_csv_data(LOCAL_GAME_META_FILE)
     game_info = [game for game in all_games if game["GameName"] in game_list]
 
     # Display the game information
@@ -56,33 +55,10 @@ def display_game_info(game_info, title):
         rows = []
         table = format_table(header, rows, column_widths, title=title, count=0)
     else:
-        rows = [[game["GameName"], game["Developer"], game["Introduction"]] for game in game_info]
+        rows = [[game[GAME_NAME], game[DEVEPLOPER], game[INTRO]] for game in game_info]
         table = format_table(header, rows, column_widths, title=title, count=len(game_info))
 
     print(table)
-
-
-def get_all_game_info(file):
-    """
-    **(1-3). Save game file with an external data source:**
-    Retrieves all game information from the external data source (e.g., `games.csv`)
-    located in the lobby server's directory.
-
-    This ensures that even if the server is restarted, the game metadata remains available.
-    """
-    game_info_list = []
-    try:
-        with open(file, 'r') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                game_info_list.append({
-                    "GameName": row["GameName"],
-                    "Developer": row["Developer"],
-                    "Introduction": row["Introduction"]
-                })
-    except FileNotFoundError:
-        print(f"Error: {file} not found.")
-    return game_info_list
 
 
 def handle_list_all_games(data, client, addr):
@@ -90,7 +66,7 @@ def handle_list_all_games(data, client, addr):
     Handles the LIST_ALL_GAMES request from the client.
     """
     # Retrieve all game information
-    all_games = get_all_game_info(GAME_META_FILE)
+    all_games = get_csv_data(LOCAL_GAME_META_FILE)
 
     # Send the game information back to the client
     client.sendall(json.dumps(all_games).encode())

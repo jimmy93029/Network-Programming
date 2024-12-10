@@ -32,17 +32,20 @@ def do_player_waiting(client_socket):
         Listens for server messages.
         """
         nonlocal status
-        while status is None:
+        while not exit_event.is_set():
             try:
                 data = client_socket.recv(1024).decode()
                 if data == "GAME_START":
                     print("Game is starting...")
                     status = IN_ROOM_PLAYER
+                    exit_event.set()
                 elif data == "HOST_LEAVE":
                     print("Host has left. You are now the host of the room.")
                     status = IN_ROOM_HOST
+                    exit_event.set()
             except Exception as e:
                 print(f"Error while receiving server data: {e}")
+                exit_event.set()
                 break
 
     def wait_for_user_input():
@@ -56,9 +59,11 @@ def do_player_waiting(client_socket):
         if choice == 1:  # Leave Room
             client_socket.sendall(b"LEAVE PLAYER")
             status = IDLE
+            exit_event.set()
 
     # Create threads for listening and user input
     status = None
+    exit_event = threading.Event()
     server_thread = threading.Thread(target=listen_to_server, daemon=True)
     input_thread = threading.Thread(target=wait_for_user_input, daemon=True)
 
@@ -66,17 +71,15 @@ def do_player_waiting(client_socket):
     server_thread.start()
     input_thread.start()
 
-    # Wait for the first thread to set the status
-    while status is None:
-        pass
+    # Wait for the exit event to be set
+    exit_event.wait()
 
-    # Ensure the other thread stops
-    if server_thread.is_alive():
-        server_thread.join(timeout=1)
-    if input_thread.is_alive():
-        input_thread.join(timeout=1)
+    # Ensure the threads terminate
+    server_thread.join(timeout=1)
+    input_thread.join(timeout=1)
 
     return status
+
 
 
 """ Server """

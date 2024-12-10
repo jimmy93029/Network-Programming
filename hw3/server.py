@@ -70,17 +70,17 @@ def handle(data, client, addr):
     if data.startswith("REGISTER"):
         handle_register(data, client, addr)
     elif data.startswith("LOGIN1"):
-        exit = handle_login1(data, client, addr, login_addr)
+        exit = handle_login1(data, client, addr, login_addr, online_users)
     elif data.startswith("LOGIN2"):
-        exit = handle_login2(data, client, addr, login_addr, online_users, mailbox)
+        exit = handle_login2(data, client, addr, login_addr, online_users, mailbox, invitations)
     elif data.startswith("LOGOUT"):
         exit = handle_logout(data, client, addr, login_addr, online_users)
     elif data.startswith("DISPLAY"):
-        handle_display(data, client, addr, online_users, rooms)
+        handle_display(data, client, addr, login_addr, online_users, rooms, invitations)
 
     # Room commands
     elif data.startswith("CREATE"):
-        handle_create_room(data, client, addr, rooms, login_addr, online_users)
+        handle_create_room(data, client, addr, rooms, login_addr, online_users, game_list)
     elif data.startswith("INVITE"):
         handle_invite(data, client, addr, login_addr, online_users, invitations, rooms)
     elif data.startswith("JOIN"):
@@ -92,7 +92,7 @@ def handle(data, client, addr):
     if data.startswith("GAME"):
         handle_game_issue(data, client, addr, rooms, login_addr, online_users)
     elif data.startswith("UPLOAD"):
-        handle_upload(data, client, addr, login_addr)
+        handle_upload(data, client, addr, login_addr, game_list)
     elif data.startswith("LIST"):
         handle_list_all_games(data, client, addr)
 

@@ -1,26 +1,42 @@
-from lobby import do_listing_online_players, do_listing_available_players, do_listing_rooms, do_listing_invitations, do_register, do_login, do_logout
-from room import do_create_room, do_invite, do_join_room, do_reply_invitation, do_host_leave, do_player_waiting
-from game import do_starting_game1, do_starting_game2, do_upload_game, do_listing_all_game, do_listing_my_game
+import threading
+from lobby import (
+    do_listing_online_players, do_listing_available_players, do_listing_rooms,
+    do_listing_invitations, do_register, do_login, do_logout
+)
+from room import (
+    do_create_room, do_invite, do_join_room, do_reply_invitation,
+    do_host_leave, do_player_waiting
+)
+from game import (
+    do_starting_game1, do_starting_game2, do_upload_game,
+    do_listing_all_game, do_listing_my_game
+)
 from utils.connection import connect_to_server
 from utils.tools import select_type
-from utils.variables import UNLOGIN, IDLE, EXIT, GAME_DEVOPLOP, INVITE_MANAGE, INVITE_SENDING, IN_ROOM_HOST, IN_ROOM_PLAYER, IN_GAME_PLAYER, client_init
+from utils.variables import (
+    UNLOGIN, IDLE, EXIT, GAME_DEVOPLOP, INVITE_MANAGE, INVITE_SENDING,
+    IN_ROOM_HOST, IN_ROOM_PLAYER, IN_GAME_PLAYER, client_init
+)
 from utils.boardcast import listen_for_broadcasts, get_user_input
-import threading
 
 
-client_socket = None    # client for user to connect to server
-option = None           # 
+client_socket = None  # client for user to connect to server
+option = None         # user option
+broadcast_thread = None  # Broadcast thread
 
 
 def run():
     global client_socket
+    global broadcast_thread
+
     status = UNLOGIN
     client_init()
 
     while True:
         try:
-            option = question(status)
-            status = do(option, status)
+            question(status)
+            status = do(status)
+
             if status == EXIT:
                 break
 
@@ -31,58 +47,71 @@ def run():
             if client_socket:
                 do_logout(client_socket, retry=1)
                 client_socket.close()
+                client_socket = None
             break
         except (ConnectionError, BrokenPipeError):
             print("Server is down or connection lost. Exiting...")
-            if client_socket: client_socket.close()
+            if client_socket:
+                client_socket.close()
+                client_socket = None
             break
 
 
 def question(status):
+    global broadcast_thread
     prompt_list = None
 
+    # Define the available options based on the current status
     if status == UNLOGIN:
         prompt_list = ["Login", "Register", "Exit"]
     elif status == IDLE:
-        prompt_list = ["Create gaming room", "Join gaming room", "List all online player", "List all online room", 
-                        "Invitation management", "List all game", "Game Develop Management", "Logout"]
+        prompt_list = [
+            "Create gaming room", "Join gaming room", "List all online players",
+            "List all online rooms", "Invitation management", "List all games",
+            "Game Develop Management", "Logout"
+        ]
     elif status == GAME_DEVOPLOP:
-        prompt_list = ["List your games", "publish the game", "Back to lobby"]
+        prompt_list = ["List your games", "Publish the game", "Back to lobby"]
     elif status == INVITE_MANAGE:
         prompt_list = ["List all the requests", "Accept request", "Back to lobby"]
+    elif status in [IN_ROOM_PLAYER, IN_GAME_PLAYER]:
+        return None
     elif status == IN_ROOM_HOST:
         prompt_list = ["Invite Player", "Start Game", "Leave the room"]
     elif status == INVITE_SENDING:
-        prompt_list = ["List available player", "Invite player", "back to room"]
-    elif status == IN_ROOM_PLAYER:
-        return
-    elif status == IN_GAME_PLAYER:
-        return
+        prompt_list = ["List available players", "Invite player", "Back to room"]
     else:
-        return
-    
-    if prompt_list:
-        option = select_type("prompts", prompt_list)
-        input_thread = threading.Thread(target=get_user_input, args=(prompt_list, set_option))
-        broadcast_thread = threading.Thread(target=listen_for_broadcasts, daemon=True)
+        return None
 
+    # Start the input thread to gather user input
+    option = None
+    input_thread = threading.Thread(target=get_user_input, args=(prompt_list, set_option))
+    input_thread.start()
+
+    # Start the broadcast thread if not already running
+    if client_socket and (broadcast_thread is None or not broadcast_thread.is_alive()):
+        broadcast_thread = threading.Thread(target=listen_for_broadcasts, args=(client_socket,), daemon=True)
         broadcast_thread.start()
-        input_thread.start()
 
-        input_thread.join()
-        
-    return option, prompt_list
-        
+    # Wait for the input thread to complete
+    input_thread.join()
 
-def do(option, status):
-    global client_socket, game_socket1, game_type, game_addr
+    # Stop the broadcast thread if it's no longer needed
+    if broadcast_thread and broadcast_thread.is_alive():
+        broadcast_thread.join(timeout=0.001)  # Ensure it stops gracefully
+
+
+def do(status):
+    global client_socket
     status_ = None
-    
+
     if status == UNLOGIN:
         if option == 1:
             client_socket = connect_to_server()
             status_ = do_login(client_socket)
-            client_socket.close() if status_ is None else None
+            if status_ is None:
+                client_socket.close()
+                client_socket = None
         elif option == 2:
             do_register()
         elif option == 3:
@@ -108,11 +137,11 @@ def do(option, status):
         if option == 1:
             status_ = do_create_room(client_socket)
         elif option == 2:
-            status_, game_addr, game_type = do_join_room(client_socket)
+            status_ = do_join_room(client_socket)
         elif option == 3:
             do_listing_online_players(client_socket)
         elif option == 4:
-            do_create_room(client_socket)
+            status_ = do_listing_rooms(client_socket)
         elif option == 5:
             status_ = INVITE_MANAGE
         elif option == 6:
@@ -121,16 +150,18 @@ def do(option, status):
             status_ = GAME_DEVOPLOP
         elif option == 8:
             status_ = do_logout(client_socket)
-            client_socket.close() if status_ is not None else None
-            
+            if status_ is not None:
+                client_socket.close()
+                client_socket = None
+
     elif status == IN_ROOM_HOST:
         if option == 1:
             status_ = INVITE_SENDING
         elif option == 2:
             status_ = do_starting_game1(client_socket)
         elif option == 3:
-            do_host_leave(client_socket)
-    
+            status_ = do_host_leave(client_socket)
+
     elif status == INVITE_SENDING:
         if option == 1:
             do_listing_available_players(client_socket)
@@ -140,10 +171,10 @@ def do(option, status):
             status_ = IN_ROOM_HOST
 
     elif status == IN_ROOM_PLAYER:
-        do_player_waiting(client_socket)
+        status_ = do_player_waiting(client_socket)
 
     elif status == IN_GAME_PLAYER:
-        do_starting_game2(client_socket)
+        status_ = do_starting_game2(client_socket)
 
     return status if status_ is None else status_
 

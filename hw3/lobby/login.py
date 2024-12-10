@@ -27,11 +27,9 @@ def login1(client_socket):
     print(response)
     if response == "User exists":
         return True
-    elif response == "User does not exist":
+    else:
         # The player receives an error prompt, unable to log in, and is advised to register.
-        print("Please register first.")
-        return False
-    else:  # Server problem
+        print(f"response : {response}")
         return False
 
 
@@ -55,7 +53,7 @@ def login2(client_socket, retry=0):
 
 
 """ Server """
-def handle_login1(data, client, addr, login_addr):
+def handle_login1(data, client, addr, login_addr, online_users):
     try:
         _, username = data.split()  # The player enters the username.
 
@@ -65,11 +63,14 @@ def handle_login1(data, client, addr, login_addr):
         # The game lobby server verifies whether the username exists.
         if username not in user_db:
             # The game lobby server responds with the error message: "User does not exist."
-            client.sendall("User does not exist".encode())
+            client.sendall(b"User does not exist")
+            return True
+        elif username in online_users:
+            client.sendall(b"User is already login")
             return True
         else:
             login_addr[addr] = username
-            client.sendall("User exists".encode())
+            client.sendall(b"User exists")
             return False
 
     except Exception as e:

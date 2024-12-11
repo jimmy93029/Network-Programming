@@ -1,5 +1,7 @@
 import csv
-from utils.variables import GAME_NAME, INTRO, DEVEPLOPER, VERSION
+import os
+from utils.variables import GAME_NAME, INTRO, DEVEPLOPER, VERSION, LOCAL_GAME_META_FILE, USER_DATA, STATUS, IDLE, SOCKET, ADDRESS
+from utils.fileIO import get_csv_data
 
 
 def select_type(choice_name, choice_list, choice="0"): 
@@ -57,71 +59,41 @@ def input_without(sign, prompt):
     return answer
 
 
-def get_csv_data(csv_file, key=None, value=None):
+def server_init(game_list):
     """
-    Fetches the entire content of a CSV file as a list of dictionaries,
-    or retrieves a specific record based on a key-value pair.
+    Initializes server data and loads game metadata into the game_list.
     """
-    try:
-        with open(csv_file, 'r') as f:
-            reader = csv.DictReader(f)
-            data = list(reader)
-            
-            if key and value:
-                for row in data:
-                    if row.get(key) == value:
-                        return row  # Return the first matching record
-                return None  # Return None if no match is found
-            
-            return data  # Return the entire content if no key-value is specified
-    except FileNotFoundError:
-        print(f"CSV file not found: {csv_file}")
-        return None
-    except Exception as e:
-        print(f"Error reading CSV file: {e}")
-        return None
+    # Ensure the metadata file exists
+    if not os.path.exists(LOCAL_GAME_META_FILE):
+        with open(LOCAL_GAME_META_FILE, 'w') as f:
+            # Initialize with a header if the file is created
+            writer = csv.DictWriter(f, fieldnames=[GAME_NAME, INTRO, DEVEPLOPER, VERSION])
+            writer.writeheader()
+
+    # Ensure the user data file exists
+    if not os.path.exists(USER_DATA):
+        with open(USER_DATA, 'w') as f:
+            writer = csv.DictWriter(f, fieldnames=["username", "password"])
+            writer.writeheader()
+
+    # Fetch all game data from the metadata file
+    game_data = get_csv_data(LOCAL_GAME_META_FILE)
+    if game_data:
+        # Extract game names and populate the game_list
+        game_list.extend(row[GAME_NAME] for row in game_data if GAME_NAME in row)
+    else:
+        print("No games found in metadata.")
 
 
-def update_csv_file(new_row, csv_file, key_column, fieldnames):
-    """
-    Updates or appends a row to a CSV file.
-    """
-    rows = []
-    key_value = new_row.get(key_column)
-    updated = False
-
-    try:
-        with open(csv_file, 'r') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                if row.get(key_column) == key_value:
-                    rows.append(new_row)  # Replace the existing row
-                    updated = True
-                else:
-                    rows.append(row)
-    except FileNotFoundError:
-        print(f"CSV file not found: {csv_file}. Creating a new file.")
-
-    if not updated:
-        rows.append(new_row)  # Append new row if not found
-
-    with open(csv_file, 'w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)
+def client_init():
+    if not os.path.exists(LOCAL_GAME_META_FILE):
+        with open(LOCAL_GAME_META_FILE, 'w') as f:
+            # Initialize with a header if the file is created
+            writer = csv.DictWriter(f, fieldnames=[GAME_NAME, INTRO, DEVEPLOPER, VERSION])
+            writer.writeheader()
 
 
-def update_game_metadata(new_game, csv_file):
-    """
-    Updates or appends game metadata in the CSV file.
-    """
-    fieldnames = [GAME_NAME, INTRO, DEVEPLOPER, VERSION]
-    update_csv_file(new_game, csv_file, GAME_NAME, fieldnames)
-
-
-def update_user_data(new_user, csv_file):
-    """
-    Updates or appends user data in the CSV file.
-    """
-    fieldnames = ["username", "password"]
-    update_csv_file(new_user, csv_file, "username", fieldnames)
+def user_init(username, online_users, client, mailbox, invitations, addr):
+    online_users[username] = {STATUS: IDLE, SOCKET: client, ADDRESS:addr}
+    mailbox[username] = []
+    invitations[username] = {}

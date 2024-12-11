@@ -1,6 +1,6 @@
 import time
 from utils.connection import connect_to_server, create_game_server
-from utils.variables import IDLE, IN_ROOM_HOST, IN_ROOM_PLAYER
+from utils.variables import IDLE, IN_ROOM_HOST, IN_ROOM_PLAYER, HOST, PLAYERS, GAME, STATUS, SOCKET, IN_GAME, IN_GAME_HOST
 import subprocess
 
 
@@ -39,12 +39,12 @@ def request_game_start(client_socket):
     client_socket.sendall(b"GAME REQUEST 0")
     server_response = client_socket.recv(1024).decode()
 
-    if server_response.startswith("NO"):
+    if server_response.startswith("NO"):   
         print("Cannot start the game. Room is not full.")
         return None
     else:
-        _, game_type = server_response.split()
-        return game_type
+        _ = server_response.split()
+        return IN_GAME_HOST
 
 
 def connecting_game(client_socket):
@@ -81,15 +81,14 @@ def in_game(game_type, game_socket, role):
     game_socket.close()
 
 
-""" Client B: Participant """
+""" Client B: Player """
 def do_starting_game2(client_socket):
     """
-    Participant connects to the game server and joins the game.
+    Player connects to the game server and joins the game.
     """
     try:
         # Receive game server details from the main server
-        game_info = client_socket.recv(1024).decode()
-        game_type, ip_address, port = game_info.split()
+        game_type, ip_address, port = client_socket.recv(1024).decode().split()
 
         # Connect to the game server
         game_socket = connect_to_server((ip_address, int(port)))
@@ -109,7 +108,7 @@ def do_starting_game2(client_socket):
 def handle_game_issue(data, client, addr, rooms, login_addr, online_users):
     _, option, info = data.split()
     host = login_addr[addr]
-    room_name = next((key for key, info in rooms.items() if info["creator"] == host), None)
+    room_name = next((key for key, info in rooms.items() if info[HOST] == host), None)
     room = rooms[room_name]
 
     if option == "REQUEST":
@@ -126,17 +125,17 @@ def game_start_request(client, room, online_users):
     Handles a game start request from the host.
     """
     # Step 1: Check if the room is full
-    if not room or len(room.get("participants", [])) < 1:  # 1 participant is required
+    if not room or len(room.get(PLAYERS, [])) != 1:  # 1 participant is required
         client.sendall(b"NO")
         return
 
     # Step 2: Notify the host that the room is full
-    client.sendall(f"YES {room['game_type']}".encode())
+    client.sendall(f"YES".encode())
 
     # Step 3: Notify all participants to prepare for the game
-    participants = room["participants"]
+    participants = room[PLAYERS]
     for participant in participants:
-        participant_socket = online_users[participant]["socket"]
+        participant_socket = online_users[participant][SOCKET]
         participant_socket.sendall(b"GAME_START")
 
 
@@ -145,10 +144,9 @@ def game_server_details(server_to_host, room, ip_address, port, online_users):
     Receives game server details from the host and sends them to the participant.
     """
     # Step 2: Send game server details to the participant
-    time.sleep(3)
-    participant = room["participants"][0]  # Assuming one participant
-    participant_socket = online_users[participant]["socket"]
-    game_info = f"{room['game type']} {ip_address} {port}"
+    participant = room[PLAYERS][0]  # Assuming one participant
+    participant_socket = online_users[participant][SOCKET]
+    game_info = f"{room[GAME]} {ip_address} {port}"
     participant_socket.sendall(game_info.encode())
 
     # Step 3: Wait for the participant's connection status
@@ -156,9 +154,9 @@ def game_server_details(server_to_host, room, ip_address, port, online_users):
     if response == "CONNECT SUCCESS":
         # Step 4: Notify the host and update statuses
         server_to_host.sendall(b"SUCCESS")
-        online_users[room["creator"]]["status"] = "In Game"
-        online_users[participant]["status"] = "In Game"
-        room["status"] = "In Game"
+        online_users[room[HOST]][STATUS] = IN_GAME
+        online_users[participant][STATUS] = IN_GAME
+        room[STATUS] = IN_GAME
     else:
         server_to_host.sendall(b"FAIL")
 
@@ -169,12 +167,12 @@ def game_ending(room_name, rooms, online_users):
     """
     # Step 1: Identify the room and players
     room = rooms.pop(room_name, None)
-    players = [room["creator"]] + room.get("participants", [])
+    players = [room[HOST]] + room.get(PLAYERS, [])
 
     # Step 2: Update all players' statuses to idle
     for player in players:
         if player in online_users:
-            online_users[player]["status"] = "idle"
+            online_users[player][STATUS] = IDLE
 
     print(f"Room {room_name} closed and all players set to idle.")
 

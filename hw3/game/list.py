@@ -1,7 +1,7 @@
-import os
 import json
 from utils.variables import LOCAL_GAME_META_FILE, GAME_NAME, DEVEPLOPER, INTRO
-from utils.tools import format_table, get_csv_data
+from utils.tools import format_table
+from utils.fileIO import get_csv_data
 
 
 def do_listing_my_game():
@@ -9,14 +9,10 @@ def do_listing_my_game():
     List all the games which the user maintains.
     """
     # Get the current directory and list files
-    user_dir = os.getcwd()
-    game_list = [file for file in os.listdir(user_dir) if os.path.isfile(os.path.join(user_dir, file))]
-
-    all_games = get_csv_data(LOCAL_GAME_META_FILE)
-    game_info = [game for game in all_games if game["GameName"] in game_list]
+    my_games = get_csv_data(LOCAL_GAME_META_FILE)
 
     # Display the game information
-    display_game_info(game_info, title="My Game Table")
+    display_game_info(my_games, title="My Game Table")
 
 
 def do_listing_all_game(client_socket):
@@ -41,10 +37,6 @@ def do_listing_all_game(client_socket):
 def display_game_info(game_info, title):
     """
     Utility function to display game information in a formatted table using format_table.
-
-    Args:
-        game_info (list): A list of dictionaries containing game information.
-        title (str): Title for the table.
     """
     # Define table structure
     header = ["Game Name", "Developer", "Introduction"]

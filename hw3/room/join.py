@@ -1,6 +1,6 @@
-from utils.connection import create_game_server
+import time
 from utils.variables import IN_ROOM_PLAYER, STATUS, PLAYERS, ROOM_TYPE, IN_GAME, MAX_PLAYERS, PRIVATE, GAME
-from game.download import check_and_sending_game, receive_game_file
+from game.download import update_game
 
 
 """Client B"""
@@ -9,19 +9,21 @@ def do_join_room(client_socket):
     Sends a request to join a public room to the server and handles the response.
     """
     try:
-        # Choose a public room to join
+        # Step1. Choose a public room to join
         room_name = input("Enter the name of the public room to join: ")
-        client_socket.sendall(f"JOIN1 {room_name}".encode())  
+        client_socket.sendall(f"JOIN {room_name}".encode())  
 
-        # Receive join confirmation
+        # Step2. Receive join confirmation
         message = client_socket.recv(1024).decode()
-        if message != "Join request accepted":
+        if not message.startswith("Join request accepted"):
             print(f"Failed to join the room: {message}")
             return None
         
         print("You have successfully joined the room.")
         _, game_name = message.split(':')
-        receive_game_file(client_socket, game_name)
+
+        # Step3. Check and update game
+        update_game(client_socket, game_name)
         
         return IN_ROOM_PLAYER
 
@@ -39,6 +41,7 @@ def handle_join(data, client, addr, rooms, online_users, login_addr):
         _, room_name = data.split()
 
         # Step1. Check if the room exists or Check room status and type
+        print("check1")
         if room_name not in rooms:
             client.sendall(b"Room does not exist")
             return
@@ -53,13 +56,14 @@ def handle_join(data, client, addr, rooms, online_users, login_addr):
             return
 
         # Step2. Add joiner to the room
+        print("check2")
         player = login_addr[addr]
         rooms[room_name][PLAYERS].append(player)
         online_users[player][STATUS] = IN_ROOM_PLAYER
         client.sendall(f"Join request accepted:{rooms[room_name][GAME]}".encode())
 
         # Step3.
-        check_and_sending_game(client, rooms[room_name][GAME])
+        print("check3")
 
     except Exception as e:
         print(f"Error handling join request: {e}")

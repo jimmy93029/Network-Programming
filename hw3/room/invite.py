@@ -1,6 +1,6 @@
 from utils.variables import IN_ROOM_PLAYER, IN_ROOM, NAME, STATUS, MESSAGE, PLAYERS, HOST, IDLE, MAX_PLAYERS, GAME
 from utils.tools import input_without
-from game.download import check_and_update_game, check_and_sending_game
+from game.download import update_game
 
 
 """Client A"""
@@ -36,7 +36,7 @@ def do_reply_invitation(client_socket):
         return
 
     # Send the current game version to the server
-    check_and_update_game(client_socket, game_type)
+    update_game(client_socket, game_type)
     print("You are now IN_ROOM_PLAYER.")
     return IN_ROOM_PLAYER
 
@@ -105,9 +105,6 @@ def handle_reply_invite(server_to_invitee, invitor, invitee, online_users, invit
 
         game_type = invitations[invitee][invitor][GAME]
         server_to_invitee.sendall(f"Success {game_type}".encode())
-
-        check_and_sending_game(server_to_invitee, game_type)
-
         rooms[room_name][PLAYERS].append(invitee)
         online_users[invitee][STATUS] = IN_ROOM
 

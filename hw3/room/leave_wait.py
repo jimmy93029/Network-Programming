@@ -1,5 +1,7 @@
 import threading
-from utils.tools import select_type
+import sys
+import select
+import time
 from utils.variables import IN_ROOM, IN_ROOM_HOST, IN_ROOM_PLAYER, IDLE, HOST, STATUS, PLAYERS, SOCKET
 
 
@@ -25,11 +27,11 @@ def do_host_leave(client_socket):
 def do_player_waiting(client_socket):
     """
     Handles player waiting in the room.
-    Opens threads for user input and server communication.
+    Opens threads for non-blocking input and server communication.
     """
     def listen_to_server():
         """
-        Listens for server messages.
+        Listens for server messages from the server.
         """
         nonlocal status
         while not exit_event.is_set():
@@ -37,49 +39,62 @@ def do_player_waiting(client_socket):
                 data = client_socket.recv(1024).decode()
                 if data == "GAME_START":
                     print("Game is starting...")
-                    status = IN_ROOM_PLAYER
+                    update_status(IN_ROOM_PLAYER)
                     exit_event.set()
                 elif data == "HOST_LEAVE":
                     print("Host has left. You are now the host of the room.")
-                    status = IN_ROOM_HOST
+                    update_status(IN_ROOM_HOST)
                     exit_event.set()
             except Exception as e:
                 print(f"Error while receiving server data: {e}")
                 exit_event.set()
                 break
 
-    def wait_for_user_input():
+    def non_blocking_input():
         """
-        Waits for user input to leave the room.
+        Continuously checks for user input to leave the room.
         """
         nonlocal status
-        print("You can choose to leave the room.")
-        options = ["Leave Room"]
-        choice = select_type("Choose an action", options)
-        if choice == 1:  # Leave Room
-            client_socket.sendall(b"LEAVE PLAYER")
-            status = IDLE
-            exit_event.set()
+        print("Input anything if you want to leave the room : ")
+        while not exit_event.is_set():
+            if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:  # Check if input is ready
+                user_input = sys.stdin.readline().strip()
+                if user_input:  # User entered something
+                    client_socket.sendall(b"LEAVE PLAYER")
+                    update_status(IDLE)
+                    exit_event.set()
+                    break
 
-    # Create threads for listening and user input
+    def update_status(new_status):
+        """
+        Thread-safe update to status variable.
+        """
+        nonlocal status
+        with status_lock:
+            status = new_status
+
+    # Thread-safe status and exit event
     status = None
     exit_event = threading.Event()
-    server_thread = threading.Thread(target=listen_to_server, daemon=True)
-    input_thread = threading.Thread(target=wait_for_user_input, daemon=True)
+    status_lock = threading.Lock()
 
-    # Start threads
+    # Create and start threads
+    server_thread = threading.Thread(target=listen_to_server)
+    input_thread = threading.Thread(target=non_blocking_input)
+
     server_thread.start()
     input_thread.start()
 
     # Wait for the exit event to be set
     exit_event.wait()
 
-    # Ensure the threads terminate
-    server_thread.join(timeout=1)
-    input_thread.join(timeout=1)
+    # Wait for threads to complete
+    server_thread.join()
+    input_thread.join()
 
-    return status
-
+    # Safely retrieve the final status
+    with status_lock:
+        return status
 
 
 """ Server """
@@ -106,6 +121,7 @@ def handle_host_leave(client, rooms, username, online_users):
         # No participants to promote to host
         del rooms[room_name]
         client.sendall(b"LEAVE_SUCCESS")
+        time.sleep(2)
         online_users[username][STATUS] = IDLE
     else:
         # Promote a participant to host
@@ -127,3 +143,4 @@ def handle_player_leave(client, rooms, username, online_users):
     rooms[room_name][PLAYERS].remove(username)
     online_users[username][STATUS] = IDLE
     client.sendall(b"LEAVE_SUCCESS")
+    time.sleep(2)

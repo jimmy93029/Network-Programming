@@ -1,10 +1,10 @@
 import threading
 from utils.connection import bind_server, handle_disconnected
-from utils.variables import server_init
 from utils.boardcast import handle_listen_for_broadcast
+from utils.tools import server_init
 from lobby import handle_register, handle_login1, handle_login2, handle_logout, handle_display
 from room import handle_create_room, handle_invite, handle_join, handle_leave
-from game import handle_game_issue, handle_list_all_games, handle_upload
+from game import handle_game_issue, handle_list_all_games, handle_upload, handle_update_game
 
 
 online_users = {}   # key : user name, value(dict) = {status, socket}
@@ -18,9 +18,9 @@ game_list = []      # entry: game_type
 
 
 def run():
-    server_init()
     server_socket = bind_server()
     client_threads = []  # Track client threads and sockets
+    server_init(game_list)
     
     try:
         while True:
@@ -95,6 +95,8 @@ def handle(data, client, addr):
         handle_upload(data, client, addr, login_addr, game_list)
     elif data.startswith("LIST"):
         handle_list_all_games(data, client, addr)
+    elif data.startswith("VERSION"):
+        handle_update_game(data, client, addr)
 
     # Uitls commands
     if data.startswith("BROADCAST"):

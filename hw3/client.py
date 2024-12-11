@@ -12,12 +12,13 @@ from game import (
     do_listing_all_game, do_listing_my_game
 )
 from utils.connection import connect_to_server
-from utils.tools import select_type
+from utils.tools import client_init
 from utils.variables import (
     UNLOGIN, IDLE, EXIT, GAME_DEVOPLOP, INVITE_MANAGE, INVITE_SENDING,
-    IN_ROOM_HOST, IN_ROOM_PLAYER, IN_GAME_PLAYER, client_init
+    IN_ROOM_HOST, IN_ROOM_PLAYER, IN_GAME_PLAYER
 )
 from utils.boardcast import listen_for_broadcasts, get_user_input
+import time
 
 
 client_socket = None  # client for user to connect to server
@@ -58,8 +59,9 @@ def run():
 
 
 def question(status):
-    global broadcast_thread
+    global option
     prompt_list = None
+    stop_event = threading.Event()
 
     # Define the available options based on the current status
     if status == UNLOGIN:
@@ -84,21 +86,17 @@ def question(status):
         return None
 
     # Start the input thread to gather user input
-    option = None
     input_thread = threading.Thread(target=get_user_input, args=(prompt_list, set_option))
     input_thread.start()
 
     # Start the broadcast thread if not already running
-    if client_socket and (broadcast_thread is None or not broadcast_thread.is_alive()):
-        broadcast_thread = threading.Thread(target=listen_for_broadcasts, args=(client_socket,), daemon=True)
-        broadcast_thread.start()
+    broadcast_thread = threading.Thread(target=listen_for_broadcasts, args=(client_socket, stop_event), daemon=True)
+    broadcast_thread.start()
 
-    # Wait for the input thread to complete
+    # Wait for the input thread to complete and signal the broadcast thread to stop
     input_thread.join()
-
-    # Stop the broadcast thread if it's no longer needed
-    if broadcast_thread and broadcast_thread.is_alive():
-        broadcast_thread.join(timeout=0.001)  # Ensure it stops gracefully
+    stop_event.set()
+    broadcast_thread.join()
 
 
 def do(status):

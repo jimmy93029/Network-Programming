@@ -1,5 +1,5 @@
 from utils.tools import select_type
-from utils.variables import IN_ROOM_HOST, Room_list, NAME, HOST, STATUS, ROOM_TYPE, GAME, PLAYERS, WAITING
+from utils.variables import IN_ROOM_HOST, Room_list, HOST, STATUS, ROOM_TYPE, GAME, PLAYERS, WAITING
 
 
 """ Client """

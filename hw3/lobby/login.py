@@ -1,5 +1,6 @@
 from .register import load_user_db
-from utils.variables import IDLE, user_init
+from utils.variables import IDLE
+from utils.tools import user_init
 
 
 """ Client """

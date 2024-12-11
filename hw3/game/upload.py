@@ -1,5 +1,6 @@
 from utils.variables import LOCAL_GAME_META_FILE, GAME_NAME, DEVEPLOPER, INTRO, VERSION
-from utils.tools import input_without, get_csv_data, update_game_metadata
+from utils.tools import input_without
+from utils.fileIO import get_csv_data, update_game_metadata, send_file, receive_file
 import os
 import time
 
@@ -82,50 +83,5 @@ def update(game_name, intro, uploader, game_list=None):
         VERSION: version,
     }
     update_game_metadata(updated_metadata, LOCAL_GAME_META_FILE)
-
-
-def send_file(client_socket, file_path):
-    """
-    Sends a file from the specified file path.
-    """
-    try:
-        with open(file_path, 'rb') as f:
-            total_bytes_sent = 0
-            while chunk := f.read(1024):
-                client_socket.sendall(chunk)
-                total_bytes_sent += len(chunk)
-                print(f"Sent {total_bytes_sent} bytes so far...")
-        client_socket.sendall(b"FILE_TRANSFER_COMPLETE")
-        time.sleep(3)
-    except FileNotFoundError:
-        print(f"Error: File not found {file_path}")
-
-
-def receive_file(client_socket, file_path):
-    """
-    Receives a file and writes it to the specified file path.
-    """
-    total_bytes_received = 0
-    with open(file_path, 'wb') as f:
-        while True:
-            chunk = client_socket.recv(1024)
-            if not chunk:  # Connection closed unexpectedly
-                print("Connection closed unexpectedly.")
-                break
-            
-            # Check if the termination marker is in the chunk
-            if b"FILE_TRANSFER_COMPLETE" in chunk:
-                chunk, _ = chunk.split(b"FILE_TRANSFER_COMPLETE", 1)
-                f.write(chunk)  # Write the remaining data in the chunk
-                total_bytes_received += len(chunk)
-                print("File transfer complete.")
-                break
-
-            # Write the received chunk to the file
-            f.write(chunk)
-            total_bytes_received += len(chunk)
-            print(f"Total bytes received: {total_bytes_received}")
-
-    print(f"File received and saved to {file_path}.")
 
 

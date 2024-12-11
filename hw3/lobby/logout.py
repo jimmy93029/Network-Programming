@@ -1,4 +1,6 @@
 from utils.tools import select_type 
+from utils.boardcast import broadcast
+
 
 """ Client """
 def do_logout(client_socket, retry=1):
@@ -33,12 +35,13 @@ def retry_logout(client_socket):
 
 
 """ Server """
-def handle_logout(data, client, addr, login_addr, online_users):
+def handle_logout(data, client, addr, login_addr, online_users, mailbox):
     try:
         # The player's status is removed, and they are deleted from the online players list
         username = login_addr[addr]
         del online_users[username]
         client.sendall("Logout successfully Bye Bye".encode())
+        broadcast(online_users, f"{username} has logged out...", mailbox)
 
     except Exception as e:
         print(f"Server encountered an error during logout: {e}")

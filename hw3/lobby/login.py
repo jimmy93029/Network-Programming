@@ -1,7 +1,7 @@
 from .register import load_user_db
 from utils.variables import IDLE
 from utils.tools import user_init
-
+from utils.boardcast import broadcast
 
 """ Client """
 def do_login(client_socket):
@@ -96,6 +96,7 @@ def handle_login2(data, client, addr, login_addr, online_users, mailbox, invitat
         if user_db.get(username) == password:
             user_init(username, online_users, client, mailbox, invitations, addr)
             client.sendall("Login successful".encode())
+            broadcast(online_users, f"{username} has logged in...", mailbox)
             return False
         elif not int(retry):
             # The game lobby server responds with the error message: "Incorrect password."

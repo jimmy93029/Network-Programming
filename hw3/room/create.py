@@ -1,5 +1,6 @@
 from utils.tools import select_type
 from utils.variables import IN_ROOM_HOST, Room_list, HOST, STATUS, ROOM_TYPE, GAME, PLAYERS, WAITING
+from utils.boardcast import broadcast
 
 
 """ Client """
@@ -31,7 +32,7 @@ def do_create_room(client_socket):
 
 
 """ Server """
-def handle_create_room(data, client, addr, rooms, login_addr, online_users, game_list):
+def handle_create_room(data, client, addr, rooms, login_addr, online_users, game_list, mailbox):
     """
     Handles the room creation request from the client.
     """
@@ -62,6 +63,7 @@ def handle_create_room(data, client, addr, rooms, login_addr, online_users, game
         rooms[room_name] = room_info
         online_users[username][STATUS] = IN_ROOM_HOST
         client.sendall(b"Create room successfully")
+        broadcast(online_users, f"{username} has create room {room_name}...", mailbox)
 
     except Exception as e:
         print(f"Server encountered an error during room creation: {e}")

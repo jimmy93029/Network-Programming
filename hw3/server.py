@@ -74,13 +74,13 @@ def handle(data, client, addr):
     elif data.startswith("LOGIN2"):
         exit = handle_login2(data, client, addr, login_addr, online_users, mailbox, invitations)
     elif data.startswith("LOGOUT"):
-        exit = handle_logout(data, client, addr, login_addr, online_users)
+        exit = handle_logout(data, client, addr, login_addr, online_users, mailbox)
     elif data.startswith("DISPLAY"):
         handle_display(data, client, addr, login_addr, online_users, rooms, invitations)
 
     # Room commands
     elif data.startswith("CREATE"):
-        handle_create_room(data, client, addr, rooms, login_addr, online_users, game_list)
+        handle_create_room(data, client, addr, rooms, login_addr, online_users, game_list, mailbox)
     elif data.startswith("INVITE"):
         handle_invite(data, client, addr, login_addr, online_users, invitations, rooms)
     elif data.startswith("JOIN"):

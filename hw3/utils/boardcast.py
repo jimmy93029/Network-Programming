@@ -39,7 +39,6 @@ def listen_for_broadcasts(client_socket, stop_event):
 
                 # Keep the last part in the buffer (it may be incomplete)
                 buffer = parts[-1]
-                print(f"buffer = {buffer}")
 
             time.sleep(0.5)  # Reduce frequency to avoid server overload
     except Exception as e:

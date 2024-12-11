@@ -1,6 +1,6 @@
-from utils.variables import LOCAL_GAME_META_FILE, GAME_NAME, DEVEPLOPER, INTRO, VERSION
+from utils.variables import LOCAL_GAME_META_FILE, GAME_NAME, DEVEPLOPER
 from utils.tools import input_without
-from utils.fileIO import get_csv_data, update_game_metadata, send_file, receive_file
+from utils.fileIO import get_csv_data, update_game_metadata, send_file, receive_file, update_game_metadata
 import os
 import time
 
@@ -31,7 +31,7 @@ def do_upload_game(client_socket):
             send_file(client_socket, file_path)
 
             # Update local metadata
-            update(game_name, intro, uploader)
+            update_game_metadata(game_name, intro, uploader)
             print(f"{game_name} uploaded successfully.")
             time.sleep(2)
         else:
@@ -61,27 +61,11 @@ def handle_upload(data, client, addr, login_addr, game_list):
         receive_file(client, file_path)
 
         # Step4. update game metadata
-        update(game_name, intro, uploader, game_list=game_list)
+        if game_list is not None:
+            game_list.append(game_name)
+        update_game_metadata(game_name, intro, uploader)
 
     except Exception as e:
         print(f"Server encountered an error during upload: {e}")
         client.sendall(b"ERROR: Upload failed due to server error.")
-
-
-def update(game_name, intro, uploader, game_list=None):
-    # update game list
-    if game_list is not None:
-        game_list.append(game_name)
-
-    # update games.csv
-    local_metadata = get_csv_data(LOCAL_GAME_META_FILE, key=GAME_NAME, value=game_name)
-    version = int(local_metadata[VERSION]) + 1 if local_metadata else 1
-    updated_metadata = {
-        GAME_NAME: game_name,
-        INTRO: intro,
-        DEVEPLOPER: uploader, 
-        VERSION: version,
-    }
-    update_game_metadata(updated_metadata, LOCAL_GAME_META_FILE)
-
 

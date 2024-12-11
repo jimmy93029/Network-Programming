@@ -41,7 +41,6 @@ def handle_join(data, client, addr, rooms, online_users, login_addr):
         _, room_name = data.split()
 
         # Step1. Check if the room exists or Check room status and type
-        print("check1")
         if room_name not in rooms:
             client.sendall(b"Room does not exist")
             return
@@ -56,14 +55,10 @@ def handle_join(data, client, addr, rooms, online_users, login_addr):
             return
 
         # Step2. Add joiner to the room
-        print("check2")
         player = login_addr[addr]
         rooms[room_name][PLAYERS].append(player)
         online_users[player][STATUS] = IN_ROOM_PLAYER
         client.sendall(f"Join request accepted:{rooms[room_name][GAME]}".encode())
-
-        # Step3.
-        print("check3")
 
     except Exception as e:
         print(f"Error handling join request: {e}")

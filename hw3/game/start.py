@@ -1,7 +1,9 @@
-import time
 from utils.connection import connect_to_server, create_game_server
 from utils.variables import IDLE, IN_ROOM_HOST, IN_ROOM_PLAYER, HOST, PLAYERS, GAME, STATUS, SOCKET, IN_GAME, IN_GAME_HOST
 import subprocess
+import sys
+import socket
+import time
 
 
 """ Client A: Host """
@@ -10,8 +12,8 @@ def do_starting_game1(client_socket):
     Host starts the game server and manages game logic.
     """
     # Step 1: Request game start from the server
-    game_type = request_game_start(client_socket)
-    if game_type is None:
+    game_name = request_game_start(client_socket)
+    if game_name is None:
         return IN_ROOM_HOST
 
     # Step 2: Create game server
@@ -19,15 +21,15 @@ def do_starting_game1(client_socket):
     if game_socket is None:
         return IN_ROOM_HOST
 
-    # Step 3: Wait for participant to connect
-    game_connection, _ = game_socket.accept()
-    print("Participant connected.")
-
-    # Step 4: Run the game
-    in_game(game_type, game_connection, "A")
-
-    # Step 5: Notify server of game completion
-    client_socket.sendall(b"GAME ENDING 0")
+    # Step 3: Run the game
+    try:
+        in_game(game_name, game_socket, "A")
+    except Exception as e:
+        print(f"Error when running the game: {e}")
+    finally:
+        # Final : Notify server of game completion
+        client_socket.sendall(b"GAME ENDING 0")
+        time.sleep(3)
 
     return IDLE
 
@@ -43,42 +45,57 @@ def request_game_start(client_socket):
         print("Cannot start the game. Room is not full.")
         return None
     else:
-        _ = server_response.split()
-        return IN_GAME_HOST
+        _, game_name = server_response.split()
+        return game_name
 
 
-def connecting_game(client_socket):
+def connecting_game(client_socket, timeout=10):
     """
-    Creates a game server and sends its details to the main server.
+    Creates a game server, sends its details to the main server,
+    and waits for a participant to connect with a timeout.
     """
+    # Step1. connect to game server 
     game_socket, ip_address, port = create_game_server()
     if not game_socket:
         print("Failed to start the game server.")
         return None
 
-    # Send server details to the main server
+    # Step2. Send server details to the main server
     game_server_info = f"GAME SERVER {ip_address}|{port}"
     client_socket.sendall(game_server_info.encode())
 
-    # Wait for server confirmation
-    participants_status = client_socket.recv(1024).decode()
-    if participants_status != "SUCCESS":
-        print("Participant failed to connect. Closing server.")
+    # Step3. Set a timeout for the accept call
+    game_socket.settimeout(timeout)
+    try:
+        # Wait for a participant to connect
+        game_connection, _ = game_socket.accept()
+        print("Participant connected successfully.")
+        return game_connection
+    except socket.timeout:
+        print(f"No participant connected within {timeout} seconds. Closing server.")
         game_socket.close()
         return None
-
-    print("Participant connected successfully. Starting the game...")
-    return game_socket
 
 
 def in_game(game_type, game_socket, role):
     """
-    Executes the selected game type.
+    Executes the selected game type in a subprocess, with output appearing in the terminal.
     """
-    subprocess.run(["python", f"{game_type}.py", role, str(game_socket.fileno())])
-
-    # Close the game socket after completion
-    game_socket.close()
+    print("In Game...")
+    try:
+        with subprocess.Popen(
+            ["python3", f"{game_type}.py", role, str(game_socket.fileno())],
+            pass_fds=(game_socket.fileno(),),
+            stdout=sys.stdout,  # Redirect subprocess stdout to parent stdout
+            stderr=sys.stderr,  # Redirect subprocess stderr to parent stderr
+            stdin=sys.stdin     # Redirect stdin to parent stdin for user input
+        ) as process:
+            process.communicate()  # Ensure real-time output is displayed
+    except Exception as e:
+        print(f"Error when running game subprocess: {e}")
+    finally:
+        # Close the game socket after subprocess completes
+        game_socket.close()
 
 
 """ Client B: Player """
@@ -130,7 +147,7 @@ def game_start_request(client, room, online_users):
         return
 
     # Step 2: Notify the host that the room is full
-    client.sendall(f"YES".encode())
+    client.sendall(f"YES {room.get(GAME)}".encode())
 
     # Step 3: Notify all participants to prepare for the game
     participants = room[PLAYERS]
@@ -153,12 +170,9 @@ def game_server_details(server_to_host, room, ip_address, port, online_users):
     response = participant_socket.recv(1024).decode()
     if response == "CONNECT SUCCESS":
         # Step 4: Notify the host and update statuses
-        server_to_host.sendall(b"SUCCESS")
         online_users[room[HOST]][STATUS] = IN_GAME
         online_users[participant][STATUS] = IN_GAME
         room[STATUS] = IN_GAME
-    else:
-        server_to_host.sendall(b"FAIL")
 
 
 def game_ending(room_name, rooms, online_users):

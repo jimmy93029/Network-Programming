@@ -1,5 +1,5 @@
 import csv
-from utils.variables import GAME_NAME, INTRO, DEVEPLOPER, VERSION
+from utils.variables import GAME_NAME, INTRO, DEVEPLOPER, VERSION, LOCAL_GAME_META_FILE
 import time
 
 
@@ -57,12 +57,19 @@ def update_csv_file(new_row, csv_file, key_column, fieldnames):
         writer.writerows(rows)
 
 
-def update_game_metadata(new_game, csv_file):
-    """
-    Updates or appends game metadata in the CSV file.
-    """
+def update_game_metadata(game_name, intro, uploader, version=None):
+    # update games.csv
+    local_metadata = get_csv_data(LOCAL_GAME_META_FILE, key=GAME_NAME, value=game_name)
+    if not version:
+        version = int(local_metadata[VERSION]) + 1 if local_metadata else 1
+    updated_metadata = {
+        GAME_NAME: game_name,
+        INTRO: intro,
+        DEVEPLOPER: uploader, 
+        VERSION: version,
+    }
     fieldnames = [GAME_NAME, INTRO, DEVEPLOPER, VERSION]
-    update_csv_file(new_game, csv_file, GAME_NAME, fieldnames)
+    update_csv_file(updated_metadata, LOCAL_GAME_META_FILE, GAME_NAME, fieldnames)
 
 
 def update_user_data(new_user, csv_file):

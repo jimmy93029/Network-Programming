@@ -1,6 +1,5 @@
-import time
-from utils.variables import LOCAL_GAME_META_FILE, GAME_NAME, VERSION
-from utils.fileIO import receive_file, send_file, get_csv_data
+from utils.variables import LOCAL_GAME_META_FILE, GAME_NAME, VERSION, INTRO, DEVEPLOPER
+from utils.fileIO import receive_file, send_file, get_csv_data, update_game_metadata
 
 
 def update_game(client_socket, game_name):
@@ -11,7 +10,7 @@ def update_game(client_socket, game_name):
     local_game = get_csv_data(LOCAL_GAME_META_FILE, key=GAME_NAME, value=game_name)
     if local_game is None:
         print(f"No local version found for {game_name}. Requesting latest version.")
-        local_version = "0"  # Assume no version
+        local_version = "0"  
     else:
         local_version = local_game[VERSION]
 
@@ -19,12 +18,16 @@ def update_game(client_socket, game_name):
     client_socket.sendall(f"VERSION {local_version} {game_name}".encode())
     file_path = f"{game_name}.py"
 
-    # Step 3: Receive the server's response
     response = client_socket.recv(1024).decode()
     if response == "Game version up-to-date":
         print(f"{game_name} is up-to-date.")
-    elif response == "Game version outdated":
+
+    # Step 3: Receive the server's response
+    elif response.startswith("Game version outdated"):
         print(f"{game_name} is outdated. Downloading the latest version...")
+        _, intro, uploader, version = response.split(':')
+
+        update_game_metadata(game_name, intro, uploader, version)
         receive_file(client_socket, file_path)
     else:
         print("Unexpected response from server.")
@@ -46,7 +49,7 @@ def handle_update_game(data, client, addr):
     if client_version == server_version:
         client.sendall(b"Game version up-to-date")
     else:
-        client.sendall(b"Game version outdated")
+        client.sendall(f"Game version outdated:{game[INTRO]}:{game[DEVEPLOPER]}:{server_version}".encode())
 
         # Step 3: Wait 3 seconds and send the game file
         send_file(client, file_path)

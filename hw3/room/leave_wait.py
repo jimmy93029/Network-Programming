@@ -2,7 +2,7 @@ import threading
 import sys
 import select
 import time
-from utils.variables import IN_ROOM, IN_ROOM_HOST, IN_ROOM_PLAYER, IDLE, HOST, STATUS, PLAYERS, SOCKET
+from utils.variables import IN_ROOM, IN_ROOM_HOST, IN_GAME_PLAYER, IDLE, HOST, STATUS, PLAYERS, SOCKET
 
 
 def do_host_leave(client_socket):
@@ -39,7 +39,7 @@ def do_player_waiting(client_socket):
                 data = client_socket.recv(1024).decode()
                 if data == "GAME_START":
                     print("Game is starting...")
-                    update_status(IN_ROOM_PLAYER)
+                    update_status(IN_GAME_PLAYER)
                     exit_event.set()
                 elif data == "HOST_LEAVE":
                     print("Host has left. You are now the host of the room.")
@@ -95,7 +95,7 @@ def do_player_waiting(client_socket):
     # Safely retrieve the final status
     with status_lock:
         return status
-
+    
 
 """ Server """
 def handle_leave(data, client, addr, rooms, login_addr, online_users):
@@ -127,7 +127,8 @@ def handle_host_leave(client, rooms, username, online_users):
         # Promote a participant to host
         new_host = rooms[room_name][PLAYERS].pop(0)
         rooms[room_name][HOST] = new_host
-        online_users[new_host][STATUS] = IN_ROOM
+        if new_host:
+            online_users[new_host][STATUS] = IN_ROOM
         online_users[username][STATUS] = IDLE
 
         client.sendall(b"LEAVE_SUCCESS")

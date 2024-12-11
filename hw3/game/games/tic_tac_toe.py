@@ -1,4 +1,3 @@
-from utils.tools import select_type
 import sys
 import socket
 
@@ -78,11 +77,33 @@ def Tic_tac_toe(socket, player):
         current_player = "O" if current_player == "X" else "X"
 
 
-def main():
-    role = sys.argv[1]
-    socket_fd = int(sys.argv[2])  # File descriptor for the socket
+def select_type(choice_name, choice_list, choice="0"): 
+    # Create a list of valid choices based on the length of choice_list
+    valid_choices = list(range(1, len(choice_list) + 1))
 
-    # Wrap the file descriptor as a socket
+    # Generate the options dynamically based on choice_list
+    options_text = "\n".join(f"({i}) {choice}" for i, choice in enumerate(choice_list, 1))
+
+    while not choice.isdigit() or int(choice) not in valid_choices:
+        choice = input(f"Which {choice_name} do you want? \n{options_text}\nPlease input your choice: ")
+
+        if not choice.isdigit():
+            print(f"Please input {choice_name} as a digit.\n")
+        elif int(choice) not in valid_choices:
+            print(f"Please input {choice_name} as a number from {valid_choices}\n")
+
+    return int(choice)
+
+
+def main():
+    if len(sys.argv) < 3:
+        print("Usage: python dark_chess.py <role> <socket_fd>")
+        sys.exit(1)
+
+    role = sys.argv[1]
+    socket_fd = int(sys.argv[2])
+
+    # Reconstruct the socket from the file descriptor
     game_socket = socket.fromfd(socket_fd, socket.AF_INET, socket.SOCK_STREAM)
 
     Tic_tac_toe(game_socket, role)

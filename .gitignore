@@ -3,3 +3,6 @@
 
 # ignore folders of server and each users 
 hw3/folders
+
+# ignore test
+**/test.py

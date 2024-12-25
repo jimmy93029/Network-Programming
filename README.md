@@ -14,3 +14,18 @@ Demo Deadline 2024/11/11(一) or 2024/11/14(四) 視教學進度而定
 
 ### Introduction
 The goal of this assignment is to modify the connection method between players from HW1. Instead of having two players connect directly via TCP/UDP in a peer-to-peer manner, the connection should now be coordinated through a central lobby server before the game starts in a peer-to-peer mode. Students are required to complete and demonstrate two programs: a lobby server and a client. The client must support functions for registration, login, and logout, and users should operate using a username and password. After a client logs in, the lobby server should display the current status of online players and allow players to create game rooms or join other players' rooms to start the game.
+
+## Congratulations, everyone! Welcome to Two-Player Online Game Part 3.
+
+[website](https://bedecked-griffin-98f.notion.site/Network-Programming-HW3-Two-Player-Online-Game-Part-3-13dd3aba0aea808abffdebe55ef6b81c)
+In this assignment, you will build upon the two-player online battle game developed in Part 2, enhancing its functionality by adding features such as an invitation list, lobby broadcasting, and basic database recording.
+
+The game lobby in this assignment should support multiple games for players (clients) to choose from. Players can upload and manage their games independently, and when creating or joining a room, they will be prompted to download the corresponding game files.
+
+### The goals of this assignment are:
+
+1.	**Enhance and optimize the lobby functionality to significantly improve the user experience.**
+
+2.	**Use sockets to Implement basic file upload/download capabilities and read/write management.**
+
+Beyond meeting the basic requirements, we encourage students to make their projects resemble a real-world game server. Additionally, consider implementing design patterns, data structures, and algorithms to enhance your code's readability, maintainability, flexibility, and scalability.
